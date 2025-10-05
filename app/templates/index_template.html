@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="app">
+    <div class="hero" style="text-align: center; padding: 4rem 0;">
+        <h1 style="font-size: 3rem; margin-bottom: 1rem;">学術論文検索・分析システム</h1>
+        <p style="font-size: 1.2rem; color: #6e6e73; margin-bottom: 2rem;">
+            Google Scholarの論文をAIで高度に検索・分析
+        </p>
+        <a href="{{ url_for('main.search_page') }}" class="btn btn-primary">検索を開始</a>
+    </div>
+    
+    <div class="features" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 4rem;">
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">🔍 高度な検索機能</h3>
+            <p>キーワード、著者名、出版年などで詳細な検索が可能。複数条件での絞り込みにも対応。</p>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">📊 統計分析</h3>
+            <p>検索結果の統計情報を可視化。年次推移、引用数分析、著者別集計などを提供。</p>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">🤖 AI特徴量検索</h3>
+            <p>「〇〇の新しい解決策を提案している論文」など、自然言語での高度な検索が可能。</p>
+        </div>
+        
+        <div class="card">
+            <h3 style="margin-bottom: 1rem;">📝 データマイニング</h3>
+            <p>頻出キーワード抽出、トピックモデリング、共起ネットワーク分析などの機能を提供。</p>
+        </div>
+    </div>
+    
+    <div class="recent-stats card" style="margin-top: 4rem;">
+        <h2 style="margin-bottom: 1.5rem;">システム統計</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+            <div>
+                <h3 style="font-size: 2rem; color: #0066cc;">{{ totalPapers }}</h3>
+                <p style="color: #6e6e73;">登録論文数</p>
+            </div>
+            <div>
+                <h3 style="font-size: 2rem; color: #0066cc;">{{ totalSearches }}</h3>
+                <p style="color: #6e6e73;">検索実行回数</p>
+            </div>
+            <div>
+                <h3 style="font-size: 2rem; color: #0066cc;">{{ totalBookmarks }}</h3>
+                <p style="color: #6e6e73;">ブックマーク数</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            totalPapers: 0,
+            totalSearches: 0,
+            totalBookmarks: 0
+        }
+    },
+    mounted() {
+        this.loadStats();
+    },
+    methods: {
+        async loadStats() {
+            // 実際の実装では、統計情報を取得するAPIを呼び出す
+            this.totalPapers = '12,345';
+            this.totalSearches = '5,678';
+            this.totalBookmarks = '890';
+        }
+    }
+}).mount('#app');
+</script>
+{% endblock %}
