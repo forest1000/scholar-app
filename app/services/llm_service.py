@@ -2,11 +2,11 @@ import os
 import numpy as np
 from typing import List, Dict, Optional
 import openai
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
-from langchain.chains import RetrievalQA
-from langchain.llms import OpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.chains import RetrievalQA
+from langchain_openai import OpenAI
 from app.models import Paper, db
 import json
 import logging
@@ -93,6 +93,52 @@ class LLMService:
                         })
             
             return results
+        
+        except Exception as e:
+            logger.error(f"Error in semantic search: {str(e)}")
+            return []
+    
+    def answer_question(self, question: str, context_papers: List[Paper]) -> Dict:
+        """論文を基に質問に回答"""
+        if not context_papers:
+            return {
+                'answer': "No papers provided for context.",
+                'sources': []
+            }
+        
+        # コンテキストを構築
+        context = self._build_context(context_papers[:5])  # 最大5論文まで
+        
+        # プロンプトを構築
+        prompt = f"""Based on the following academic papers, please answer the question.
+
+Context:
+{context}
+
+Question: {question}
+
+Please provide a comprehensive answer based on the papers provided. If the papers don't contain relevant information, say so clearly."""
+        
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a helpful research assistant that answers questions based on academic papers."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=1000
+            )
+            
+            answer = response.choices[0].message.content
+            
+            # ソース論文を特定
+            sources = [p.to_dict() for p in context_papers[:5]]
+            
+            return {
+                'answer': answer,
+                'sources': sources
+            }
         
         except Exception as e:
             logger.error(f"Error in answer_question: {str(e)}")
@@ -291,50 +337,4 @@ Summary:"""
         if paper.publication_year:
             parts.append(f"Year: {paper.publication_year}")
         
-        return "\n".join(parts)error(f"Error in semantic search: {str(e)}")
-            return []
-    
-    def answer_question(self, question: str, context_papers: List[Paper]) -> Dict:
-        """論文を基に質問に回答"""
-        if not context_papers:
-            return {
-                'answer': "No papers provided for context.",
-                'sources': []
-            }
-        
-        # コンテキストを構築
-        context = self._build_context(context_papers[:5])  # 最大5論文まで
-        
-        # プロンプトを構築
-        prompt = f"""Based on the following academic papers, please answer the question.
-
-Context:
-{context}
-
-Question: {question}
-
-Please provide a comprehensive answer based on the papers provided. If the papers don't contain relevant information, say so clearly."""
-        
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a helpful research assistant that answers questions based on academic papers."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=1000
-            )
-            
-            answer = response.choices[0].message.content
-            
-            # ソース論文を特定
-            sources = [p.to_dict() for p in context_papers[:5]]
-            
-            return {
-                'answer': answer,
-                'sources': sources
-            }
-        
-        except Exception as e:
-            logger.
+        return "\n".join(parts)

@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union
-from langchain.llms.base import LLM
-from langchain.embeddings.base import Embeddings
-from langchain.llms import OpenAI
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.llms import HuggingFacePipeline
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.callbacks import CallbackManagerForLLMRun
+from langchain_core.language_models.llms import LLM
+from langchain_core.embeddings import Embeddings
+from langchain_openai import OpenAI
+from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_community.llms import HuggingFacePipeline
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from transformers import pipeline
 import torch
 import logging

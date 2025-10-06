@@ -1,0 +1,8 @@
+# setting
+.venv
+.env.example
+.env
+*.pyc
+
+# database
+migrations/

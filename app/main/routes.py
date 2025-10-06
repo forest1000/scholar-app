@@ -3,7 +3,7 @@ from app.main import main
 from app.models import Paper, SearchSession, Bookmark, db
 from app.services.scholar_service import ScholarService
 from app.services.analysis_service import AnalysisService
-from app.services.llm_service import LLMService
+from app.services.unified_llm_service import UnifiedLLMService
 from app.services.export_service import ExportService
 import json
 from datetime import datetime
@@ -12,21 +12,21 @@ import io
 # サービスインスタンス
 scholar_service = None
 analysis_service = None
-llm_service = None
+unified_llm_service = None
 export_service = None
 
 def get_services():
     """サービスインスタンスを取得（遅延初期化）"""
-    global scholar_service, analysis_service, llm_service, export_service
+    global scholar_service, analysis_service, unified_llm_service, export_service
     if not scholar_service:
         scholar_service = ScholarService()
     if not analysis_service:
         analysis_service = AnalysisService()
-    if not llm_service:
-        llm_service = LLMService()
+    if not unified_llm_service:
+        unified_llm_service = UnifiedLLMService()
     if not export_service:
         export_service = ExportService()
-    return scholar_service, analysis_service, llm_service, export_service
+    return scholar_service, analysis_service, unified_llm_service, export_service
 
 @main.route('/')
 def index():
@@ -37,6 +37,11 @@ def index():
 def search_page():
     """検索ページ"""
     return render_template('search.html')
+
+@main.route('/llm-config')
+def llm_config_page():
+    """LLM設定ページ"""
+    return render_template('llm_config.html')
 
 @main.route('/api/search', methods=['POST'])
 def api_search():
@@ -274,18 +279,26 @@ def api_llm_search():
         else:
             papers = Paper.query.limit(500).all()  # 処理時間を考慮
         
-        _, _, llm = get_services()
+        _, _, llm, _ = get_services()
         
-        # ベクトルインデックスを構築
-        llm.build_vector_index(papers)
-        
-        # 検索実行
-        if data.get('feature_extraction'):
-            # 特徴抽出モード
-            results = llm.extract_features(query, papers)
+        # ベクトルインデックスを構築（LLMサービスの場合）
+        if hasattr(llm, 'build_vector_index'):
+            llm.build_vector_index(papers)
+            
+            # 検索実行
+            if data.get('feature_extraction'):
+                # 特徴抽出モード
+                results = llm.extract_features(query, papers)
+            else:
+                # セマンティック検索モード
+                results = llm.semantic_search(query, top_k=data.get('top_k', 10))
         else:
-            # セマンティック検索モード
-            results = llm.semantic_search(query, top_k=data.get('top_k', 10))
+            # 統合LLMサービスを使用
+            paper_dicts = [p.to_dict() for p in papers]
+            results = llm.semantic_search(query, paper_dicts, top_k=data.get('top_k', 10))
+            
+            # 結果の形式を統一
+            results = [{'paper': r['document'], 'relevance_score': r['similarity_score']} for r in results]
         
         return jsonify({
             'success': True,
@@ -308,8 +321,25 @@ def api_llm_answer():
         
         papers = Paper.query.filter(Paper.id.in_(paper_ids)).all() if paper_ids else []
         
-        _, _, llm = get_services()
-        result = llm.answer_question(question, papers)
+        _, _, llm, _ = get_services()
+        
+        if hasattr(llm, 'answer_question') and papers:
+            # LLMサービスのメソッドを使用
+            result = llm.answer_question(question, papers)
+        else:
+            # 統合LLMサービスを使用
+            context = ""
+            for paper in papers[:5]:
+                context += f"Title: {paper.title}\n"
+                if paper.abstract:
+                    context += f"Abstract: {paper.abstract}\n"
+                context += "\n"
+            
+            answer = llm.answer_question(question, context)
+            result = {
+                'answer': answer,
+                'sources': [p.to_dict() for p in papers[:5]]
+            }
         
         return jsonify({
             'success': True,

@@ -19,4 +19,8 @@ def create_app(config_name='default'):
     from app.main import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
+    # LLMルートの登録
+    from app.main.llm_routes import llm_bp
+    app.register_blueprint(llm_bp)
+    
     return app

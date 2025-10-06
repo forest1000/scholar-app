@@ -44,7 +44,7 @@
         
         <button @click="search" class="btn btn-primary" :disabled="loading">
             <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
-            {{ loading ? '検索中...' : '検索実行' }}
+            <span v-text="loading ? '検索中...' : '検索実行'"></span>
         </button>
         
         <button v-if="results.length > 0" @click="showAnalysis" class="btn btn-secondary" style="margin-left: 1rem;">
@@ -54,27 +54,27 @@
     
     <!-- エラー表示 -->
     <div v-if="error" class="alert alert-error">
-        {{ error }}
+        <span v-text="error"></span>
     </div>
     
     <!-- 検索結果 -->
     <div v-if="results.length > 0" class="card">
-        <h3 style="margin-bottom: 1.5rem;">検索結果 ({{ totalResults }}件)</h3>
+        <h3 style="margin-bottom: 1.5rem;">検索結果 (<span v-text="totalResults"></span>件)</h3>
         
         <div v-for="paper in results" :key="paper.id || paper.scholar_id" class="paper-item">
             <h4 class="paper-title" @click="showPaperDetail(paper)">
-                {{ paper.title }}
+                <span v-text="paper.title"></span>
             </h4>
             <div class="paper-authors">
-                {{ formatAuthors(paper.authors) }}
+                <span v-text="formatAuthors(paper.authors)"></span>
             </div>
             <div class="paper-meta">
-                <span v-if="paper.publication_year">📅 {{ paper.publication_year }}</span>
-                <span v-if="paper.journal">📄 {{ paper.journal }}</span>
-                <span v-if="paper.citations">📊 引用数: {{ paper.citations }}</span>
+                <span v-if="paper.publication_year">📅 <span v-text="paper.publication_year"></span></span>
+                <span v-if="paper.journal">📄 <span v-text="paper.journal"></span></span>
+                <span v-if="paper.citations">📊 引用数: <span v-text="paper.citations"></span></span>
             </div>
             <div v-if="paper.abstract" style="margin-top: 0.5rem; color: #6e6e73;">
-                {{ truncateText(paper.abstract, 200) }}
+                <span v-text="truncateText(paper.abstract, 200)"></span>
             </div>
             <div style="margin-top: 0.5rem;">
                 <button @click="bookmarkPaper(paper)" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
@@ -96,7 +96,7 @@
                 :class="currentPage === page ? 'btn-primary' : 'btn-secondary'"
                 style="padding: 0.5rem 1rem;"
             >
-                {{ page }}
+                <span v-text="page"></span>
             </button>
         </div>
     </div>
@@ -117,17 +117,17 @@
                         <h4>トップ著者</h4>
                         <ul style="list-style: none;">
                             <li v-for="author in statistics.top_authors" :key="author.name" style="padding: 0.5rem 0;">
-                                {{ author.name }} ({{ author.count }}件)
+                                <span v-text="author.name"></span> (<span v-text="author.count"></span>件)
                             </li>
                         </ul>
                     </div>
                     
                     <div>
                         <h4>引用統計</h4>
-                        <p>平均引用数: {{ Math.round(statistics.citation_stats.mean) }}</p>
-                        <p>中央値: {{ statistics.citation_stats.median }}</p>
-                        <p>最大値: {{ statistics.citation_stats.max }}</p>
-                        <p>合計: {{ statistics.citation_stats.total }}</p>
+                        <p>平均引用数: <span v-text="Math.round(statistics.citation_stats.mean)"></span></p>
+                        <p>中央値: <span v-text="statistics.citation_stats.median"></span></p>
+                        <p>最大値: <span v-text="statistics.citation_stats.max"></span></p>
+                        <p>合計: <span v-text="statistics.citation_stats.total"></span></p>
                     </div>
                 </div>
             </div>
@@ -146,7 +146,7 @@
             <h4>頻出キーワード</h4>
             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
                 <span v-for="kw in miningResults.keywords" :key="kw.word" class="tag" :style="{fontSize: (0.8 + kw.score * 0.5) + 'rem'}">
-                    {{ kw.word }}
+                    <span v-text="kw.word"></span>
                 </span>
             </div>
         </div>
