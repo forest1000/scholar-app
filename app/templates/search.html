@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="searchApp">
+    <!-- 検索フォーム -->
+    <div class="card">
+        <h2 style="margin-bottom: 1.5rem;">論文検索</h2>
+        
+        <div class="form-group">
+            <label class="form-label">検索タイプ</label>
+            <select v-model="searchType" class="form-control">
+                <option value="keyword">キーワード検索</option>
+                <option value="author">著者名検索</option>
+                <option value="llm">AI特徴量検索</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">検索クエリ</label>
+            <input 
+                v-model="query" 
+                type="text" 
+                class="form-control"
+                :placeholder="searchType === 'llm' ? '例: 機械学習の新しい手法を提案している論文' : '検索キーワードを入力'"
+                @keyup.enter="search"
+            >
+        </div>
+        
+        <div v-if="searchType !== 'llm'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label class="form-label">開始年</label>
+                <input v-model="yearFrom" type="number" class="form-control" placeholder="例: 2020">
+            </div>
+            <div class="form-group">
+                <label class="form-label">終了年</label>
+                <input v-model="yearTo" type="number" class="form-control" placeholder="例: 2024">
+            </div>
+        </div>
+        
+        <div v-if="searchType !== 'llm'" class="form-group">
+            <label class="form-label">ジャーナル名（オプション）</label>
+            <input v-model="journal" type="text" class="form-control" placeholder="例: Nature">
+        </div>
+        
+        <button @click="search" class="btn btn-primary" :disabled="loading">
+            <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
+            <span v-text="loading ? '検索中...' : '検索実行'"></span>
+        </button>
+        
+        <button v-if="results.length > 0" @click="showAnalysis" class="btn btn-secondary" style="margin-left: 1rem;">
+            統計分析を表示
+        </button>
+    </div>
+    
+    <!-- エラー表示 -->
+    <div v-if="error" class="alert alert-error">
+        <span v-text="error"></span>
+    </div>
+    
+    <!-- 検索結果 -->
+    <div v-if="results.length > 0" class="card">
+        <h3 style="margin-bottom: 1.5rem;">検索結果 (<span v-text="totalResults"></span>件)</h3>
+        
+        <div v-for="paper in results" :key="paper.id || paper.scholar_id" class="paper-item">
+            <h4 class="paper-title" @click="showPaperDetail(paper)">
+                <span v-text="paper.title"></span>
+            </h4>
+            <div class="paper-authors">
+                <span v-text="formatAuthors(paper.authors)"></span>
+            </div>
+            <div class="paper-meta">
+                <span v-if="paper.publication_year">📅 <span v-text="paper.publication_year"></span></span>
+                <span v-if="paper.journal">📄 <span v-text="paper.journal"></span></span>
+                <span v-if="paper.citations">📊 引用数: <span v-text="paper.citations"></span></span>
+            </div>
+            <div v-if="paper.abstract" style="margin-top: 0.5rem; color: #6e6e73;">
+                <span v-text="truncateText(paper.abstract, 200)"></span>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <button @click="bookmarkPaper(paper)" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                    ブックマーク
+                </button>
+                <a v-if="paper.url" :href="paper.url" target="_blank" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem; margin-left: 0.5rem;">
+                    論文を開く
+                </a>
+            </div>
+        </div>
+        
+        <!-- ページネーション -->
+        <div v-if="totalPages > 1" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+            <button 
+                v-for="page in totalPages" 
+                :key="page"
+                @click="changePage(page)"
+                class="btn"
+                :class="currentPage === page ? 'btn-primary' : 'btn-secondary'"
+                style="padding: 0.5rem 1rem;"
+            >
+                <span v-text="page"></span>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 統計モーダル -->
+    <div v-if="showStats" class="modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
+        <div class="card" style="width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
+            <h3 style="margin-bottom: 1.5rem;">検索結果の統計分析</h3>
+            
+            <div v-if="statistics">
+                <div style="margin-bottom: 2rem;">
+                    <h4>年次推移</h4>
+                    <canvas id="yearChart"></canvas>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <div>
+                        <h4>トップ著者</h4>
+                        <ul style="list-style: none;">
+                            <li v-for="author in statistics.top_authors" :key="author.name" style="padding: 0.5rem 0;">
+                                <span v-text="author.name"></span> (<span v-text="author.count"></span>件)
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h4>引用統計</h4>
+                        <p>平均引用数: <span v-text="Math.round(statistics.citation_stats.mean)"></span></p>
+                        <p>中央値: <span v-text="statistics.citation_stats.median"></span></p>
+                        <p>最大値: <span v-text="statistics.citation_stats.max"></span></p>
+                        <p>合計: <span v-text="statistics.citation_stats.total"></span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <button @click="showStats = false" class="btn btn-secondary" style="margin-top: 2rem;">
+                閉じる
+            </button>
+        </div>
+    </div>
+    
+    <!-- データマイニング結果 -->
+    <div v-if="miningResults" class="card">
+        <h3 style="margin-bottom: 1.5rem;">データマイニング結果</h3>
+        
+        <div v-if="miningResults.keywords">
+            <h4>頻出キーワード</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+                <span v-for="kw in miningResults.keywords" :key="kw.word" class="tag" :style="{fontSize: (0.8 + kw.score * 0.5) + 'rem'}">
+                    <span v-text="kw.word"></span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            searchType: 'keyword',
+            query: '',
+            yearFrom: '',
+            yearTo: '',
+            journal: '',
+            loading: false,
+            error: null,
+            results: [],
+            totalResults: 0,
+            currentPage: 1,
+            totalPages: 0,
+            showStats: false,
+            statistics: null,
+            miningResults: null
+        }
+    },
+    methods: {
+        async search() {
+            this.loading = true;
+            this.error = null;
+            
+            try {
+                let endpoint = '/api/search';
+                let payload = {
+                    query: this.query,
+                    type: this.searchType,
+                    page: this.currentPage
+                };
+                
+                if (this.searchType === 'llm') {
+                    endpoint = '/api/llm/search';
+                } else {
+                    payload.year_from = this.yearFrom ? parseInt(this.yearFrom) : null;
+                    payload.year_to = this.yearTo ? parseInt(this.yearTo) : null;
+                    payload.journal = this.journal;
+                }
+                
+                const response = await axios.post(endpoint, payload);
+                
+                if (response.data.success) {
+                    this.results = response.data.results;
+                    this.totalResults = response.data.total || this.results.length;
+                    this.totalPages = response.data.pages || 1;
+                    
+                    // データマイニング実行
+                    if (this.results.length > 0) {
+                        this.performDataMining();
+                    }
+                } else {
+                    this.error = response.data.error;
+                }
+            } catch (err) {
+                this.error = err.response?.data?.error || 'エラーが発生しました';
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        async performDataMining() {
+            try {
+                const paperIds = this.results.map(p => p.id).filter(id => id);
+                const response = await axios.post('/api/mining', {
+                    paper_ids: paperIds,
+                    type: 'keywords',
+                    top_n: 15
+                });
+                
+                if (response.data.success) {
+                    this.miningResults = response.data;
+                }
+            } catch (err) {
+                console.error('Data mining error:', err);
+            }
+        },
+        
+        async showAnalysis() {
+            this.showStats = true;
+            
+            if (!this.statistics) {
+                try {
+                    const paperIds = this.results.map(p => p.id).filter(id => id);
+                    const response = await axios.post('/api/statistics', {
+                        paper_ids: paperIds
+                    });
+                    
+                    if (response.data.success) {
+                        this.statistics = response.data.statistics;
+                        this.$nextTick(() => {
+                            this.drawYearChart();
+                        });
+                    }
+                } catch (err) {
+                    console.error('Statistics error:', err);
+                }
+            }
+        },
+        
+        drawYearChart() {
+            const ctx = document.getElementById('yearChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: this.statistics.year_distribution.years,
+                    datasets: [{
+                        label: '論文数',
+                        data: this.statistics.year_distribution.counts,
+                        backgroundColor: 'rgba(0, 102, 204, 0.6)',
+                        borderColor: 'rgba(0, 102, 204, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        },
+        
+        async bookmarkPaper(paper) {
+            try {
+                const response = await axios.post('/api/bookmark', {
+                    paper_id: paper.id,
+                    note: '',
+                    tags: []
+                });
+                
+                if (response.data.success) {
+                    alert('ブックマークしました');
+                }
+            } catch (err) {
+                alert('ブックマークに失敗しました');
+            }
+        },
+        
+        showPaperDetail(paper) {
+            // 詳細表示機能（実装予定）
+            console.log('Paper detail:', paper);
+        },
+        
+        formatAuthors(authors) {
+            if (!authors || authors.length === 0) return '著者不明';
+            if (typeof authors === 'string') return authors;
+            return authors.join(', ');
+        },
+        
+        truncateText(text, maxLength) {
+            if (!text || text.length <= maxLength) return text;
+            return text.substr(0, maxLength) + '...';
+        },
+        
+        changePage(page) {
+            this.currentPage = page;
+            this.search();
+        }
+    }
+}).mount('#searchApp');
+</script>
+{% endblock %}

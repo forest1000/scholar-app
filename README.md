@@ -1,0 +1,151 @@
+# モノリス論文検索・分析アプリケーション
+
+研究者や学生向けの学術論文検索・分析システムです。Google Scholarから論文情報を取得し、AIを活用した高度な検索・分析機能を提供します。
+
+## 主な機能
+
+### 1. 論文検索機能
+- **基本検索**: キーワード、著者名、論文タイトルでの検索
+- **絞り込み検索**: 出版年範囲、ジャーナル名での絞り込み
+- **複数クエリ検索**: AND/OR条件での複雑な検索
+
+### 2. 結果表示・分析
+- **検索結果一覧**: 引用数や発行年でのソート機能
+- **論文詳細表示**: アブストラクトと書誌情報の確認
+- **統計情報可視化**: 年次推移グラフ、引用統計など
+
+### 3. データマイニング
+- **サマリーマイニング**: 頻出キーワード抽出、共起分析
+- **トピックモデリング**: LDAによるトピック分析
+- **共起ネットワーク**: キーワード間の関係性可視化
+
+### 4. AI機能
+- **LLM特徴量検索**: 自然言語での高度な検索
+- **質問応答**: 論文内容に基づく質問への回答
+- **類似論文検索**: ベクトル埋め込みによる類似性検索
+
+## 技術スタック
+
+- **バックエンド**: Python 3.10+, Flask
+- **フロントエンド**: Vue.js 3, Chart.js
+- **データベース**: PostgreSQL
+- **論文データ取得**: scholarly (Google Scholar API)
+- **データ分析**: pandas, scikit-learn, NLTK
+- **AI/LLM**: OpenAI API (GPT-4), LangChain, Faiss
+- **インフラ**: Docker, Gunicorn, Nginx
+
+## セットアップ
+
+### 1. 前提条件
+- Docker & Docker Compose
+- OpenAI API キー
+
+### 2. 環境構築
+
+```bash
+# リポジトリのクローン
+git clone <repository-url>
+cd scholar-app
+
+# 環境変数の設定
+cp .env.example .env
+# .envファイルを編集し、必要な値を設定
+
+# Dockerコンテナの起動
+docker-compose up -d
+
+# データベースのマイグレーション
+docker-compose exec web flask db init
+docker-compose exec web flask db migrate
+docker-compose exec web flask db upgrade
+```
+
+### 3. アクセス
+ブラウザで `http://localhost` にアクセス
+
+## 開発
+
+### ローカル開発環境
+
+```bash
+# 仮想環境の作成
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# データベースのセットアップ
+flask db init
+flask db migrate
+flask db upgrade
+
+# 開発サーバーの起動
+python run.py
+```
+
+### プロジェクト構造
+
+```
+/scholar-app
+├── app/                    # アプリケーションコード
+│   ├── __init__.py        # Flask初期化
+│   ├── models.py          # データベースモデル
+│   ├── main/              # メインブループリント
+│   │   ├── __init__.py
+│   │   └── routes.py      # ルーティング定義
+│   ├── services/          # ビジネスロジック
+│   │   ├── scholar_service.py   # Google Scholar連携
+│   │   ├── analysis_service.py  # データ分析
+│   │   └── llm_service.py       # LLM機能
+│   ├── static/            # 静的ファイル
+│   └── templates/         # HTMLテンプレート
+├── tests/                 # テストコード
+├── migrations/            # DBマイグレーション
+├── requirements.txt       # Python依存関係
+├── config.py             # 設定ファイル
+├── run.py                # 起動スクリプト
+└── docker-compose.yml    # Docker設定
+```
+
+## API エンドポイント
+
+### 検索関連
+- `POST /api/search` - 論文検索
+- `GET /api/paper/<id>` - 論文詳細取得
+
+### 分析関連
+- `POST /api/statistics` - 統計情報取得
+- `POST /api/mining` - データマイニング実行
+
+### AI機能
+- `POST /api/llm/search` - AI検索
+- `POST /api/llm/answer` - 質問応答
+
+### ユーザー機能
+- `POST /api/bookmark` - ブックマーク追加
+- `GET /api/bookmarks` - ブックマーク一覧
+- `GET /api/sessions` - 検索セッション一覧
+
+## 注意事項
+
+### Google Scholar利用規約の遵守
+- リクエスト間に最低2秒のウェイトを設定
+- 過度なアクセスを避けるためのキャッシュ機構を実装
+- 商用利用の場合は別途確認が必要
+
+### パフォーマンス考慮事項
+- 大量の論文処理時はバッチ処理を推奨
+- LLM処理は処理時間がかかるため、非同期処理の検討を推奨
+
+## ライセンス
+
+本プロジェクトは研究・教育目的での利用を想定しています。商用利用の際は別途ご相談ください。
+
+## 貢献
+
+バグ報告や機能改善の提案は、GitHubのIssuesまでお願いします。
+
+## サポート
+
+質問や問題がある場合は、プロジェクトのIssuesセクションで報告してください。
