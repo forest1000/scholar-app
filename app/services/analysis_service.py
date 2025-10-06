@@ -42,7 +42,6 @@ class AnalysisService:
             'total_papers': len(papers),
             'year_distribution': self._get_year_distribution(df),
             'top_authors': self._get_top_authors(df),
-            'top_journals': self._get_top_journals(df),
             'citation_stats': self._get_citation_statistics(df),
             'publication_trend': self._get_publication_trend(df)
         }
@@ -174,7 +173,6 @@ class AnalysisService:
                 'title': paper.title,
                 'authors': paper.authors,
                 'year': paper.publication_year,
-                'journal': paper.journal,
                 'citations': paper.citations,
                 'abstract': paper.abstract
             })
@@ -200,11 +198,7 @@ class AnalysisService:
         
         return [{'name': author, 'count': count} for author, count in top_authors]
     
-    def _get_top_journals(self, df: pd.DataFrame, top_n: int = 10) -> List[Dict]:
-        """トップジャーナルを取得"""
-        journal_counts = df['journal'].value_counts().head(top_n)
-        return [{'name': journal, 'count': int(count)} for journal, count in journal_counts.items()]
-    
+     
     def _get_citation_statistics(self, df: pd.DataFrame) -> Dict:
         """引用統計を計算"""
         citations = df['citations'].dropna()

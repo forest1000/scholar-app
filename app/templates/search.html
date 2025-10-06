@@ -37,11 +37,6 @@
             </div>
         </div>
         
-        <div v-if="searchType !== 'llm'" class="form-group">
-            <label class="form-label">ジャーナル名（オプション）</label>
-            <input v-model="journal" type="text" class="form-control" placeholder="例: Nature">
-        </div>
-        
         <button @click="search" class="btn btn-primary" :disabled="loading">
             <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
             <span v-text="loading ? '検索中...' : '検索実行'"></span>
@@ -70,8 +65,6 @@
             </div>
             <div class="paper-meta">
                 <span v-if="paper.publication_year">📅 <span v-text="paper.publication_year"></span></span>
-                <span v-if="paper.journal">📄 <span v-text="paper.journal"></span></span>
-                <span v-if="paper.citations">📊 引用数: <span v-text="paper.citations"></span></span>
             </div>
             <div v-if="paper.abstract" style="margin-top: 0.5rem; color: #6e6e73;">
                 <span v-text="truncateText(paper.abstract, 200)"></span>
@@ -97,43 +90,6 @@
                 style="padding: 0.5rem 1rem;"
             >
                 <span v-text="page"></span>
-            </button>
-        </div>
-    </div>
-    
-    <!-- 統計モーダル -->
-    <div v-if="showStats" class="modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000;">
-        <div class="card" style="width: 90%; max-width: 800px; max-height: 90vh; overflow-y: auto;">
-            <h3 style="margin-bottom: 1.5rem;">検索結果の統計分析</h3>
-            
-            <div v-if="statistics">
-                <div style="margin-bottom: 2rem;">
-                    <h4>年次推移</h4>
-                    <canvas id="yearChart"></canvas>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                    <div>
-                        <h4>トップ著者</h4>
-                        <ul style="list-style: none;">
-                            <li v-for="author in statistics.top_authors" :key="author.name" style="padding: 0.5rem 0;">
-                                <span v-text="author.name"></span> (<span v-text="author.count"></span>件)
-                            </li>
-                        </ul>
-                    </div>
-                    
-                    <div>
-                        <h4>引用統計</h4>
-                        <p>平均引用数: <span v-text="Math.round(statistics.citation_stats.mean)"></span></p>
-                        <p>中央値: <span v-text="statistics.citation_stats.median"></span></p>
-                        <p>最大値: <span v-text="statistics.citation_stats.max"></span></p>
-                        <p>合計: <span v-text="statistics.citation_stats.total"></span></p>
-                    </div>
-                </div>
-            </div>
-            
-            <button @click="showStats = false" class="btn btn-secondary" style="margin-top: 2rem;">
-                閉じる
             </button>
         </div>
     </div>
@@ -165,7 +121,6 @@ createApp({
             query: '',
             yearFrom: '',
             yearTo: '',
-            journal: '',
             loading: false,
             error: null,
             results: [],
@@ -195,7 +150,7 @@ createApp({
                 } else {
                     payload.year_from = this.yearFrom ? parseInt(this.yearFrom) : null;
                     payload.year_to = this.yearTo ? parseInt(this.yearTo) : null;
-                    payload.journal = this.journal;
+                   
                 }
                 
                 const response = await axios.post(endpoint, payload);

@@ -52,22 +52,17 @@ def api_search():
         search_type = data.get('type', 'keyword')  # keyword, author, title
         year_from = data.get('year_from')
         year_to = data.get('year_to')
-        journal = data.get('journal')
         page = data.get('page', 1)
         per_page = current_app.config.get('ITEMS_PER_PAGE', 20)
         
-        scholar, _, _ = get_services()
+        scholar, _, _, _ = get_services()
         
         # 検索実行
         if search_type == 'author':
             results = scholar.search_by_author(query)
         else:
             results = scholar.search_papers(query, year_from, year_to)
-        
-        # ジャーナルでフィルタリング
-        if journal:
-            results = [r for r in results if journal.lower() in r.get('journal', '').lower()]
-        
+
         # ページング
         total = len(results)
         start = (page - 1) * per_page
@@ -79,7 +74,7 @@ def api_search():
             session = SearchSession(
                 session_name=data.get('session_name', f"Search {datetime.now()}"),
                 query=query,
-                filters={'year_from': year_from, 'year_to': year_to, 'journal': journal},
+                filters={'year_from': year_from, 'year_to': year_to},
                 results_count=total
             )
             db.session.add(session)

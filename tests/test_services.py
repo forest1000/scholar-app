@@ -23,7 +23,6 @@ class TestAnalysisService(unittest.TestCase):
                 authors=["John Doe", "Jane Smith"],
                 abstract="This paper discusses ML applications in healthcare.",
                 publication_year=2023,
-                journal="Nature Medicine",
                 citations=50
             ),
             Paper(
@@ -31,7 +30,6 @@ class TestAnalysisService(unittest.TestCase):
                 authors=["Jane Smith", "Bob Johnson"],
                 abstract="A comprehensive review of deep learning techniques.",
                 publication_year=2022,
-                journal="Medical Image Analysis",
                 citations=75
             ),
             Paper(
@@ -39,7 +37,6 @@ class TestAnalysisService(unittest.TestCase):
                 authors=["Alice Brown"],
                 abstract="Ethical considerations for AI in medical applications.",
                 publication_year=2023,
-                journal="Nature Medicine",
                 citations=25
             )
         ]
@@ -110,7 +107,6 @@ class TestScholarService(unittest.TestCase):
                 'author': ['Test Author'],
                 'abstract': 'Test abstract',
                 'pub_year': '2023',
-                'venue': 'Test Journal'
             },
             'scholar_id': 'test123',
             'num_citations': 10,

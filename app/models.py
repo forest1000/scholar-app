@@ -12,7 +12,6 @@ class Paper(db.Model):
     authors = db.Column(JSON)  # ["Author1", "Author2", ...]
     abstract = db.Column(db.Text)
     publication_year = db.Column(db.Integer, index=True)
-    journal = db.Column(db.String(500))
     citations = db.Column(db.Integer, default=0)
     url = db.Column(db.Text)
     pdf_link = db.Column(db.Text)
@@ -31,7 +30,6 @@ class Paper(db.Model):
             'authors': self.authors,
             'abstract': self.abstract,
             'publication_year': self.publication_year,
-            'journal': self.journal,
             'citations': self.citations,
             'url': self.url,
             'pdf_link': self.pdf_link,

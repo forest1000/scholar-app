@@ -46,8 +46,6 @@ class LLMService:
                 text += f"Abstract: {paper.abstract}\n"
             if paper.authors:
                 text += f"Authors: {', '.join(paper.authors)}\n"
-            if paper.journal:
-                text += f"Journal: {paper.journal}\n"
             if paper.publication_year:
                 text += f"Year: {paper.publication_year}\n"
             
@@ -332,8 +330,6 @@ Summary:"""
             parts.append(f"Abstract: {paper.abstract}")
         if paper.authors:
             parts.append(f"Authors: {', '.join(paper.authors)}")
-        if paper.journal:
-            parts.append(f"Journal: {paper.journal}")
         if paper.publication_year:
             parts.append(f"Year: {paper.publication_year}")
         

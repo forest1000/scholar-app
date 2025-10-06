@@ -23,7 +23,6 @@ class ExportService:
                 'Title': paper.title,
                 'Authors': '; '.join(paper.authors) if paper.authors else '',
                 'Year': paper.publication_year,
-                'Journal': paper.journal,
                 'Citations': paper.citations,
                 'Abstract': paper.abstract,
                 'URL': paper.url,
@@ -52,7 +51,6 @@ class ExportService:
                     'Title': paper.title,
                     'Authors': '; '.join(paper.authors) if paper.authors else '',
                     'Year': paper.publication_year,
-                    'Journal': paper.journal,
                     'Citations': paper.citations,
                     'Abstract': paper.abstract[:500] if paper.abstract else '',  # 長さ制限
                     'URL': paper.url,
@@ -76,11 +74,7 @@ class ExportService:
                 if 'top_authors' in statistics:
                     df_authors = pd.DataFrame(statistics['top_authors'])
                     df_authors.to_excel(writer, sheet_name='Top Authors', index=False)
-                
-                # ジャーナル統計
-                if 'top_journals' in statistics:
-                    df_journals = pd.DataFrame(statistics['top_journals'])
-                    df_journals.to_excel(writer, sheet_name='Top Journals', index=False)
+            
             
             # フォーマット設定
             workbook = writer.book
@@ -111,7 +105,6 @@ class ExportService:
                 'title': paper.title,
                 'author': ' and '.join(paper.authors) if paper.authors else 'Unknown',
                 'year': str(paper.publication_year) if paper.publication_year else '',
-                'journal': paper.journal or '',
                 'abstract': paper.abstract or '',
                 'url': paper.url or '',
                 'citations': str(paper.citations) if paper.citations else '0'
@@ -213,9 +206,7 @@ class ExportService:
             paper_text = f"<b>{i}. {paper.title}</b><br/>"
             paper_text += f"著者: {', '.join(paper.authors[:3]) if paper.authors else '不明'}<br/>"
             paper_text += f"年: {paper.publication_year}, 引用数: {paper.citations}<br/>"
-            if paper.journal:
-                paper_text += f"ジャーナル: {paper.journal}<br/>"
-            
+             
             story.append(Paragraph(paper_text, styles['Normal']))
             story.append(Spacer(1, 0.2*inch))
         

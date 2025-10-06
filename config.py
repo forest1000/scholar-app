@@ -13,8 +13,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Google Scholar settings
-    SCHOLAR_WAIT_TIME = 2  # リクエスト間の待機時間（秒）
-    MAX_RESULTS_PER_QUERY = 100
+    SCHOLAR_WAIT_TIME = 2 # リクエスト間の待機時間（秒）
+    MAX_RESULTS_PER_QUERY = 20
+    
+    MOCK_SCHOLAR = False
     
     # LLM settings
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')

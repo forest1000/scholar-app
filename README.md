@@ -2,6 +2,11 @@
 
 研究者や学生向けの学術論文検索・分析システムです。Google Scholarから論文情報を取得し、AIを活用した高度な検索・分析機能を提供します。
 
+## project
+![初期画面](asset/images/base.png)
+![検索画面](asset/images/search.png)
+
+
 ## 主な機能
 
 ### 1. 論文検索機能
