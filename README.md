@@ -17,7 +17,6 @@
 ### 2. 結果表示・分析
 - **検索結果一覧**: 引用数や発行年でのソート機能
 - **論文詳細表示**: アブストラクトと書誌情報の確認
-- **統計情報可視化**: 年次推移グラフ、引用統計など
 
 ### 3. データマイニング
 - **サマリーマイニング**: 頻出キーワード抽出、共起分析
@@ -34,7 +33,7 @@
 - **バックエンド**: Python 3.10+, Flask
 - **フロントエンド**: Vue.js 3, Chart.js
 - **データベース**: PostgreSQL
-- **論文データ取得**: scholarly (Google Scholar API)
+- **論文データ取得**: arxiv ( [Arxiv API](https://info.arxiv.org/about/index.html))
 - **データ分析**: pandas, scikit-learn, NLTK
 - **AI/LLM**: OpenAI API (GPT-4), LangChain, Faiss
 - **インフラ**: Docker, Gunicorn, Nginx
