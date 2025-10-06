@@ -88,26 +88,57 @@ python run.py
 
 ```
 /scholar-app
-├── app/                    # アプリケーションコード
-│   ├── __init__.py        # Flask初期化
-│   ├── models.py          # データベースモデル
-│   ├── main/              # メインブループリント
+├── .gitignore                 # Git除外設定
+├── .env.example              # 環境変数テンプレート
+├── .env                      # 環境変数（Git管理外）
+├── README.md                 # プロジェクト説明
+├── requirements.txt          # Python依存関係
+├── config.py                # アプリケーション設定
+├── run.py                   # 起動スクリプト
+├── docker_compose.yml       # Docker Compose設定
+├── dockerfile.yml           # Dockerイメージ定義
+├── nginx.conf              # Nginx設定
+│
+├── app/                     # アプリケーションコード
+│   ├── __init__.py         # Flask初期化
+│   ├── models.py           # データベースモデル (Paper, SearchSession, Bookmark)
+│   ├── tasks.py            # Celeryバックグラウンドタスク
+│   │
+│   ├── main/               # メインブループリント
 │   │   ├── __init__.py
-│   │   └── routes.py      # ルーティング定義
-│   ├── services/          # ビジネスロジック
-│   │   ├── scholar_service.py   # Google Scholar連携
-│   │   ├── analysis_service.py  # データ分析
-│   │   └── llm_service.py       # LLM機能
-│   ├── static/            # 静的ファイル
-│   └── templates/         # HTMLテンプレート
-├── tests/                 # テストコード
-├── migrations/            # DBマイグレーション
-├── requirements.txt       # Python依存関係
-├── config.py             # 設定ファイル
-├── run.py                # 起動スクリプト
-└── docker-compose.yml    # Docker設定
+│   │   ├── routes.py       # メインルーティング
+│   │   └── llm_routes.py   # LLM関連APIエンドポイント
+│   │
+│   ├── auth/               # 認証機能（オプション）
+│   │   └── models.py       # ユーザーモデル
+│   │
+│   ├── services/           # ビジネスロジック
+│   │   ├── scholar_service.py      # Google Scholar連携
+│   │   ├── analysis_service.py     # データ分析・マイニング
+│   │   ├── llm_service.py          # LLM機能（従来版）
+│   │   ├── unified_llm_service.py  # 統合LLMサービス
+│   │   ├── local_model_manager.py  # ローカルモデル管理
+│   │   ├── model_manager.py        # モデルマネージャー（重複）
+│   │   ├── gpu_detector.py         # GPU環境検出
+│   │   └── export_service.py       # エクスポート機能
+│   │
+│   ├── static/             # 静的ファイル
+│   │   ├── css/
+│   │   │   └── style.css   # アプリケーションスタイル
+│   │   └── js/
+│   │       └── llm_config.js  # LLM設定JavaScript
+│   │
+│   └── templates/          # HTMLテンプレート
+│       ├── base.html       # ベーステンプレート
+│       ├── index.html      # トップページ
+│       ├── search.html     # 検索ページ
+│       └── llm_config.html # LLM設定ページ
+│
+├── migrations/             # DBマイグレーション（Git管理外）
+│
+└── tests/                  # テストコード
+    └── test_services.py    # サービスレイヤーテスト
 ```
-
 ## API エンドポイント
 
 ### 検索関連
@@ -118,15 +149,29 @@ python run.py
 - `POST /api/statistics` - 統計情報取得
 - `POST /api/mining` - データマイニング実行
 
-### AI機能
+### AI/LLM機能
 - `POST /api/llm/search` - AI検索
 - `POST /api/llm/answer` - 質問応答
+- `GET /api/llm/gpu-info` - GPU環境情報取得
+- `GET /api/llm/backends` - 利用可能なLLMバックエンド取得
+- `GET /api/llm/models/compatible` - 互換性のあるモデル一覧
+- `POST /api/llm/backend/configure` - LLMバックエンド設定
+- `GET /api/llm/backend/status` - 現在のバックエンド状態
+- `POST /api/llm/models/download` - モデルダウンロード
+- `DELETE /api/llm/models/cache` - モデルキャッシュクリア
+- `POST /api/llm/generate` - テキスト生成
 
 ### ユーザー機能
 - `POST /api/bookmark` - ブックマーク追加
 - `GET /api/bookmarks` - ブックマーク一覧
 - `GET /api/sessions` - 検索セッション一覧
 
+### エクスポート機能
+- `POST /api/export/csv` - CSV形式でエクスポート
+- `POST /api/export/excel` - Excel形式でエクスポート
+- `POST /api/export/bibtex` - BibTeX形式でエクスポート
+- `POST /api/export/json` - JSON形式でエクスポート
+- `POST /api/export/pdf` - PDF形式でエクスポート
 ## 注意事項
 
 ### Google Scholar利用規約の遵守
