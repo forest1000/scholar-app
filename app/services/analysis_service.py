@@ -20,7 +20,9 @@ except LookupError:
     nltk.download('wordnet')
 
 class AnalysisService:
-    """データマイニング処理を担当するサービスクラス"""
+    """
+    データマイニング処理を担当するサービスクラス
+    """
     
     def __init__(self):
         self.lemmatizer = WordNetLemmatizer()
@@ -197,31 +199,7 @@ class AnalysisService:
         top_authors = author_counts.most_common(top_n)
         
         return [{'name': author, 'count': count} for author, count in top_authors]
-    
-     
-    def _get_citation_statistics(self, df: pd.DataFrame) -> Dict:
-        """引用統計を計算"""
-        citations = df['citations'].dropna()
-        if len(citations) == 0:
-            return {}
-        
-        return {
-            'mean': float(citations.mean()),
-            'median': float(citations.median()),
-            'max': int(citations.max()),
-            'min': int(citations.min()),
-            'total': int(citations.sum())
-        }
-    
-    def _get_publication_trend(self, df: pd.DataFrame) -> Dict:
-        """出版トレンドを分析"""
-        # 年ごとの平均引用数
-        year_citations = df.groupby('year')['citations'].mean()
-        
-        return {
-            'years': year_citations.index.tolist(),
-            'avg_citations': year_citations.values.tolist()
-        }
+
     
     def _preprocess_text(self, text: str) -> str:
         """テキストの前処理"""

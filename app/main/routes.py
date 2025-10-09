@@ -69,8 +69,8 @@ def api_search():
         end = start + per_page
         paginated_results = results[start:end]
         
-        # セッション保存（オプション）
         if data.get('save_session'):
+            session = 
             session = SearchSession(
                 session_name=data.get('session_name', f"Search {datetime.now()}"),
                 query=query,

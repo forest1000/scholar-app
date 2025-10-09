@@ -14,7 +14,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class LLMService:
-    """LLMとベクトル検索を用いた高度な検索機能を提供"""
+    """
+    LLMとベクトル検索を用いた高度な検索機能を提供
+    Local LLMでも動作するようにする or Local LLM専用のクラスを作成する
+    """
     
     def __init__(self):
         self.api_key = os.getenv('OPENAI_API_KEY')
@@ -53,8 +56,7 @@ class LLMService:
             metadatas.append({
                 'paper_id': paper.id,
                 'title': paper.title,
-                'year': paper.publication_year,
-                'citations': paper.citations
+                'year': paper.publication_year
             })
         
         # テキストを分割
@@ -161,16 +163,16 @@ Please provide a comprehensive answer based on the papers provided. If the paper
             
             user_prompt = f"""Query: {query}
 
-Paper Information:
-{paper_text}
+                            Paper Information:
+                            {paper_text}
 
-Does this paper match the query? If yes, explain specifically which aspects of the paper relate to the query.
-If no, simply say "No match".
+                            Does this paper match the query? If yes, explain specifically which aspects of the paper relate to the query.
+                            If no, simply say "No match".
 
-Response format:
-Match: Yes/No
-Explanation: [Your explanation]
-Relevance Score: [0-10]"""
+                            Response format:
+                            Match: Yes/No
+                            Explanation: [Your explanation]
+                            Relevance Score: [0-10]"""
             
             try:
                 response = openai.ChatCompletion.create(
@@ -300,10 +302,11 @@ Summary:"""
         for p, score in similarities[:top_k]:
             results.append({
                 'paper': p.to_dict(),
-                'similarity_score': float(score)
+                'similarity_score': float(score) 
             })
         
         return results
+
     
     def _build_context(self, papers: List[Paper]) -> str:
         """論文リストからコンテキスト文字列を構築"""
