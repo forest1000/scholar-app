@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% extends "base.html" %}
+
 {% block content %}
 <div id="app">
     <div class="hero" style="text-align: center; padding: 4rem 0;">
@@ -52,29 +54,8 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-<script>
-const { createApp } = Vue;
 
-createApp({
-    data() {
-        return {
-            totalPapers: 0,
-            totalSearches: 0,
-            totalBookmarks: 0
-        }
-    },
-    mounted() {
-        this.loadStats();
-    },
-    methods: {
-        async loadStats() {
-            // 実際の実装では、統計情報を取得するAPIを呼び出す
-            this.totalPapers = '12,345';
-            this.totalSearches = '5,678';
-            this.totalBookmarks = '890';
-        }
-    }
-}).mount('#app');
-</script>
+{% block scripts %}
+    {{ super() }}
+    <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
 {% endblock %}

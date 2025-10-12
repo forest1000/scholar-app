@@ -6,7 +6,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Blueprintの定義
 llm_bp = Blueprint('llm', __name__, url_prefix='/api/llm')
+"""
+llm_routes.py - LLM設定関連のAPIエンドポイントを提供
+
+get_backends: 利用可能なバックエンドの取得
+get_gpu_info: GPU環境の情報取得
+get_compatible_models: 現在の環境で動作可能なモデルの取得
+configure_backend: LLMバックエンドの設定
+get_backend_status: 現在のバックエンドの状態取得
+download_model: モデルのダウンロード
+clear_model_cache: モデルキャッシュのクリア
+check_model_compatibility: 特定モデルの互換性チェック
+"""
 
 # グローバルなサービスインスタンス
 unified_llm_service = UnifiedLLMService()
@@ -172,35 +185,6 @@ def clear_model_cache():
     
     except Exception as e:
         logger.error(f"Error clearing cache: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@llm_bp.route('/generate', methods=['POST'])
-def generate_text():
-    """テキスト生成エンドポイント"""
-    try:
-        data = request.get_json()
-        prompt = data.get('prompt')
-        kwargs = data.get('parameters', {})
-        
-        if not prompt:
-            return jsonify({
-                'success': False,
-                'error': 'prompt is required'
-            }), 400
-        
-        generated_text = unified_llm_service.generate_text(prompt, **kwargs)
-        
-        return jsonify({
-            'success': True,
-            'generated_text': generated_text,
-            'backend_type': unified_llm_service.backend_type
-        })
-    
-    except Exception as e:
-        logger.error(f"Error generating text: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
