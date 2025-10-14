@@ -6,4 +6,5 @@
 
 # database
 migrations/
->>>>>>> master
+hoge.md
+.gitignore
