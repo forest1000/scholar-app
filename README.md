@@ -1,200 +1,241 @@
-# モノリス論文検索・分析アプリケーション
+# 学術論文検索・分析システム (AI Feature Search)
 
-研究者や学生向けの学術論文検索・分析システムです。Google Scholarから論文情報を取得し、AIを活用した高度な検索・分析機能を提供します。
+## 概要
 
-## project
-![初期画面](asset/images/base.png)
-![検索画面](asset/images/search.png)
-
+このシステムは、arXivから学術論文を検索し、AI技術を活用して高度な特徴量検索と分析を行うWebアプリケーションです。OpenAIに依存せず、完全にローカルで動作するHugging FaceモデルとFAISSを使用しています。
 
 ## 主な機能
 
-### 1. 論文検索機能
-- **基本検索**: キーワード、著者名、論文タイトルでの検索
-- **絞り込み検索**: 出版年範囲での絞り込み
-- **複数クエリ検索**: AND/OR条件での複雑な検索
+### 🔍 AI特徴量検索
+- **自然言語クエリ**: 「深層学習を使った画像認識の新しい手法を提案している論文」のような自然な文章で検索
+- **ベクトル類似度検索**: HuggingFace Embeddingsを使用した意味的類似度による検索
+- **論文分析**: 各論文の背景、手法、新規性を自動抽出
+- **コサイン類似度計算**: 検索クエリと論文のベクトル表現の類似度を計算し、上位K件を選択
 
-### 2. 結果表示・分析
-- **検索結果一覧**: 引用数や発行年でのソート機能
-- **論文詳細表示**: アブストラクトの確認
-
-### 3. データマイニング
-- **サマリーマイニング**: 頻出キーワード抽出、共起分析
-- **トピックモデリング**: LDAによるトピック分析
-- **共起ネットワーク**: キーワード間の関係性可視化
-
-### 4. AI機能
-- **LLM特徴量検索**: 自然言語での高度な検索
-- **類似論文検索**: ベクトル埋め込みによる類似性検索
-- **新規性説明**:　概要から手法、新規性を要約する
+### 📊 基本機能
+- キーワード検索、著者名検索
+- 年代別フィルタリング
+- データマイニング（頻出キーワード抽出、トピックモデリング）
+- 統計分析とビジュアライゼーション
+- ブックマーク機能
+- 検索セッション管理
 
 ## 技術スタック
 
-- **バックエンド**: Python 3.10+, Flask
-- **フロントエンド**: Vue.js 3, Chart.js
-- **データベース**: PostgreSQL
-- **論文データ取得**: arxiv ( [Arxiv API](https://info.arxiv.org/about/index.html))
-- **データ分析**: pandas, scikit-learn, NLTK
-- **AI/LLM**: OpenAI API (GPT-4), LangChain, Faiss, 
-- **インフラ**: Docker, Gunicorn, Nginx
+### バックエンド
+- **Flask**: Webフレームワーク
+- **SQLAlchemy**: ORM
+- **LangChain**: LLM統合フレームワーク
+- **FAISS**: ベクトル類似度検索
+- **HuggingFace Transformers**: 事前学習済みモデル
+- **scikit-learn**: 機械学習ライブラリ
+
+### AI/MLモデル（OpenAI不使用）
+- **Embeddings**: `intfloat/multilingual-e5-large` (多言語対応)
+- **Summarization**: `sonoisa/t5-base-japanese` (日本語対応)
+- **Text Processing**: NLTK, spaCy
+
+### フロントエンド
+- **Vue.js 3**: リアクティブUI
+- **Axios**: HTTP通信
+- **Chart.js**: データビジュアライゼーション
 
 ## セットアップ
 
-### 1. 前提条件
-- Docker & Docker Compose
-- OpenAI API キー
-
-### 2. 環境構築
+### 1. 環境構築
 
 ```bash
 # リポジトリのクローン
-git clone <repository-url>
-cd scholar-app
+git clone 
+cd scholar-research-assistant
 
-# 環境変数の設定
-cp .env.example .env
-# .envファイルを編集し、必要な値を設定
-
-# Dockerコンテナの起動
-docker-compose up -d
-
-# データベースのマイグレーション
-docker-compose exec web flask db init
-docker-compose exec web flask db migrate
-docker-compose exec web flask db upgrade
-```
-
-### 3. アクセス
-ブラウザで `http://localhost` にアクセス
-
-## 開発
-
-### ローカル開発環境
-
-```bash
-# 仮想環境の作成
+# Python仮想環境の作成
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 依存関係のインストール
+# 依存パッケージのインストール
 pip install -r requirements.txt
 
-# データベースのセットアップ
-flask db init
-flask db migrate
-flask db upgrade
+# NLTKデータのダウンロード
+python -c "import nltk; nltk.download('punkt'); nltk.download('stopwords'); nltk.download('wordnet')"
+```
 
-# 開発サーバーの起動
+### 2. データベース初期化
+
+```bash
+# データベースの作成
+flask init-db
+
+# サンプルデータの投入（オプション）
+flask seed-db
+```
+
+### 3. モデルのダウンロード
+
+```bash
+# 必要なAIモデルをダウンロード（初回のみ）
+flask download-models
+```
+
+### 4. 環境変数の設定
+
+`.env`ファイルを作成:
+
+```env
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+DATABASE_URL=sqlite:///scholar_research.db
+
+# GPU使用時（オプション）
+CUDA_VISIBLE_DEVICES=0
+```
+
+## 起動方法
+
+### 開発サーバー
+
+```bash
+# Flaskアプリケーションの起動
 python run.py
+
+# または
+flask run
 ```
 
-### プロジェクト構造
+アプリケーションは `http://localhost:5000` でアクセス可能です。
+
+### 本番環境
+
+```bash
+# Gunicornを使用（推奨）
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 run:app
+```
+
+## AI特徴量検索の使い方
+
+1. **検索ページへアクセス**
+   - トップページから「検索を開始」をクリック
+
+2. **検索タイプの選択**
+   - 「AI特徴量検索」を選択
+
+3. **自然言語でクエリ入力**
+   - 例：「強化学習を医療診断に応用した研究」
+   - 例：「Transformerを使った時系列予測の新手法」
+   - 例：「環境問題に機械学習を適用した事例」
+
+4. **検索範囲の設定**
+   - すべての論文
+   - ブックマークした論文
+   - 特定セッションの論文
+
+5. **結果の確認**
+   - 類似度スコアとともに上位K件の論文が表示
+   - 各論文の背景、手法、新規性が自動分析されて表示
+
+6. **ブックマーク保存**
+   - 「検索結果を自動でブックマーク」オプションで一括保存可能
+
+## プロジェクト構造
 
 ```
-/scholar-app
-├── .gitignore                 # Git除外設定
-├── .env.example              # 環境変数テンプレート
-├── .env                      # 環境変数（Git管理外）
-├── README.md                 # プロジェクト説明
-├── requirements.txt          # Python依存関係
-├── config.py                # アプリケーション設定
+scholar-research-assistant/
+├── app/
+│   ├── __init__.py           # Flaskアプリケーション初期化
+│   ├── models.py             # データベースモデル
+│   ├── main/
+│   │   ├── routes_v2.py     # 改良されたAPIエンドポイント
+│   │   └── llm_routes.py    # LLM設定関連のルート
+│   ├── services/
+│   │   ├── llm_service_v2.py # AI特徴量検索サービス（OpenAI不使用）
+│   │   ├── scholar_service.py # arXiv検索サービス
+│   │   ├── analysis_service.py # データ分析サービス
+│   │   └── export_service.py  # エクスポート機能
+│   ├── templates/
+│   │   ├── base.html         # ベーステンプレート
+│   │   ├── index.html        # トップページ
+│   │   └── search_v2.html   # AI特徴量検索ページ
+│   └── static/
+│       ├── css/
+│       └── js/
+├── config.py                 # アプリケーション設定
+├── requirements.txt          # 依存パッケージ
 ├── run.py                   # 起動スクリプト
-├── docker_compose.yml       # Docker Compose設定
-├── dockerfile.yml           # Dockerイメージ定義
-├── nginx.conf              # Nginx設定
-│
-├── app/                     # アプリケーションコード
-│   ├── __init__.py         # Flask初期化
-│   ├── models.py           # データベースモデル (Paper, SearchSession, Bookmark)
-│   ├── tasks.py            # Celeryバックグラウンドタスク
-│   │
-│   ├── main/               # メインブループリント
-│   │   ├── __init__.py
-│   │   ├── routes.py       # メインルーティング
-│   │   └── llm_routes.py   # LLM関連APIエンドポイント
-│   │
-│   ├── auth/               # 認証機能（オプション）
-│   │   └── models.py       # ユーザーモデル
-│   │
-│   ├── services/           # ビジネスロジック
-│   │   ├── scholar_service.py      # Google Scholar連携
-│   │   ├── analysis_service.py     # データ分析・マイニング
-│   │   ├── llm_service.py          # LLM機能（従来版）
-│   │   ├── unified_llm_service.py  # 統合LLMサービス
-│   │   ├── local_model_manager.py  # ローカルモデル管理
-│   │   ├── model_manager.py        # モデルマネージャー（重複）
-│   │   ├── gpu_detector.py         # GPU環境検出
-│   │   └── export_service.py       # エクスポート機能
-│   │
-│   ├── static/             # 静的ファイル
-│   │   ├── css/
-│   │   │   └── style.css   # アプリケーションスタイル
-│   │   └── js/
-│   │       └── llm_config.js  # LLM設定JavaScript
-│   │
-│   └── templates/          # HTMLテンプレート
-│       ├── base.html       # ベーステンプレート
-│       ├── index.html      # トップページ
-│       ├── search.html     # 検索ページ
-│       └── llm_config.html # LLM設定ページ
-│
-├── migrations/             # DBマイグレーション（Git管理外）
-│
-└── tests/                  # テストコード
-    └── test_services.py    # サービスレイヤーテスト
+└── README.md                # このファイル
 ```
+
 ## API エンドポイント
 
-### 検索関連
-- `POST /api/search` - 論文検索
-- `GET /api/paper/<id>` - 論文詳細取得
+### AI特徴量検索
+- `POST /api/llm/feature-search`
+  - パラメータ：query, scope, top_k, save_bookmarks
+  - レスポンス：類似度順の論文リストと分析結果
 
-### 分析関連
-- `POST /api/statistics` - 統計情報取得
-- `POST /api/mining` - データマイニング実行
+### 論文分析
+- `POST /api/llm/analyze-papers`
+  - パラメータ：paper_ids
+  - レスポンス：各論文の背景、手法、新規性
 
-### AI/LLM機能
-- `POST /api/llm/search` - AI検索
-- `POST /api/llm/answer` - 質問応答
-- `GET /api/llm/gpu-info` - GPU環境情報取得
-- `GET /api/llm/backends` - 利用可能なLLMバックエンド取得
-- `GET /api/llm/models/compatible` - 互換性のあるモデル一覧
-- `POST /api/llm/backend/configure` - LLMバックエンド設定
-- `GET /api/llm/backend/status` - 現在のバックエンド状態
-- `POST /api/llm/models/download` - モデルダウンロード
-- `DELETE /api/llm/models/cache` - モデルキャッシュクリア
-- `POST /api/llm/generate` - テキスト生成
+### 基本検索
+- `POST /api/search`
+  - パラメータ：query, type, year_from, year_to
 
-### ユーザー機能
-- `POST /api/bookmark` - ブックマーク追加
-- `GET /api/bookmarks` - ブックマーク一覧
-- `GET /api/sessions` - 検索セッション一覧
+### データマイニング
+- `POST /api/mining`
+  - パラメータ：paper_ids, type (keywords/topics/network)
 
-### エクスポート機能
-- `POST /api/export/csv` - CSV形式でエクスポート
-- `POST /api/export/excel` - Excel形式でエクスポート
-- `POST /api/export/bibtex` - BibTeX形式でエクスポート
-- `POST /api/export/json` - JSON形式でエクスポート
-- `POST /api/export/pdf` - PDF形式でエクスポート
-## 注意事項
+## パフォーマンス最適化
 
-### Google Scholar利用規約の遵守
-- リクエスト間に最低2秒のウェイトを設定
-- 過度なアクセスを避けるためのキャッシュ機構を実装
-- 商用利用の場合は別途確認が必要
+### GPU利用
+CUDAが利用可能な場合、自動的にGPUを使用します:
 
-### パフォーマンス考慮事項
-- 大量の論文処理時はバッチ処理を推奨
-- LLM処理は処理時間がかかるため、非同期処理の検討を推奨
+```python
+# config.py
+DEFAULT_DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+```
+
+### ベクトルインデックス
+大規模データセットの場合、FAISSのIVFインデックスを使用:
+
+```python
+# config.py
+FAISS_INDEX_TYPE = 'IVF'  # デフォルトは 'Flat'
+```
+
+## トラブルシューティング
+
+### メモリ不足エラー
+- モデルサイズを削減（より小さいモデルを使用）
+- バッチサイズを減らす
+- CPUモードに切り替える
+
+### モデルダウンロードエラー
+- ネットワーク接続を確認
+- Hugging Faceのトークンを設定（プライベートモデルの場合）
+
+### 検索速度が遅い
+- FAISSインデックスを事前構築
+- GPUを使用
+- 検索対象の論文数を制限
 
 ## ライセンス
 
-本プロジェクトは研究・教育目的での利用を想定しています。商用利用の際は別途ご相談ください。
+MIT License
 
 ## 貢献
 
-バグ報告や機能改善の提案は、GitHubのIssuesまでお願いします。
+プルリクエストを歓迎します。大きな変更の場合は、まずissueを開いて変更内容を議論してください。
 
-## サポート
+## 謝辞
 
-質問や問題がある場合は、プロジェクトのIssuesセクションで報告してください。
+- arXiv APIを提供するCornell University
+- Hugging Faceコミュニティ
+- LangChainプロジェクト
+- FAISSライブラリ（Meta Research）
+
+---
+
+**注意**: このシステムはOpenAIのAPIを使用せず、完全にローカルで動作する設計となっています。すべてのAI機能はHugging Faceの事前学習済みモデルとオープンソースライブラリで実装されています。
+
+

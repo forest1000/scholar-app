@@ -3,30 +3,33 @@ from app.main import main
 from app.models import Paper, SearchSession, Bookmark, db
 from app.services.scholar_service import ScholarService
 from app.services.analysis_service import AnalysisService
-from app.services.unified_llm_service import UnifiedLLMService
+from app.services.llm_service import FeatureSearchService
 from app.services.export_service import ExportService
 import json
 from datetime import datetime
 import io
+import logging
+
+logger = logging.getLogger(__name__)
 
 # サービスインスタンス
 scholar_service = None
 analysis_service = None
-unified_llm_service = None
+feature_search_service = None
 export_service = None
 
 def get_services():
     """サービスインスタンスを取得（遅延初期化）"""
-    global scholar_service, analysis_service, unified_llm_service, export_service
+    global scholar_service, analysis_service, feature_search_service, export_service
     if not scholar_service:
         scholar_service = ScholarService()
     if not analysis_service:
         analysis_service = AnalysisService()
-    if not unified_llm_service:
-        unified_llm_service = UnifiedLLMService()
+    if not feature_search_service:
+        feature_search_service = FeatureSearchService()
     if not export_service:
         export_service = ExportService()
-    return scholar_service, analysis_service, unified_llm_service, export_service
+    return scholar_service, analysis_service, feature_search_service, export_service
 
 @main.route('/')
 def index():
@@ -69,8 +72,15 @@ def api_search():
         end = start + per_page
         paginated_results = results[start:end]
         
+        # 検索結果を論文として保存
+        saved_papers = []
+        for result in paginated_results:
+            paper = _save_or_update_paper(result)
+            if paper:
+                saved_papers.append(paper)
+        
+        # セッション保存
         if data.get('save_session'):
-            session = 
             session = SearchSession(
                 session_name=data.get('session_name', f"Search {datetime.now()}"),
                 query=query,
@@ -78,6 +88,11 @@ def api_search():
                 results_count=total
             )
             db.session.add(session)
+            
+            # 論文との関連付け
+            for paper in saved_papers:
+                session.papers.append(paper)
+            
             db.session.commit()
         
         return jsonify({
@@ -89,6 +104,121 @@ def api_search():
         })
     
     except Exception as e:
+        logger.error(f"Error in api_search: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/llm/feature-search', methods=['POST'])
+def api_feature_search():
+    """AI特徴量検索API - 完全な実装"""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        search_scope = data.get('scope', 'all')  # all, session, bookmarked
+        top_k = data.get('top_k', 10)
+        save_bookmarks = data.get('save_bookmarks', False)
+        
+        if not query:
+            return jsonify({
+                'success': False,
+                'error': 'Query is required'
+            }), 400
+        
+        logger.info(f"Starting AI feature search with query: {query}")
+        
+        # 検索範囲の論文を取得
+        papers = _get_papers_by_scope(search_scope, data.get('session_id'))
+        
+        if not papers:
+            return jsonify({
+                'success': False,
+                'error': 'No papers found in the specified scope'
+            }), 404
+        
+        logger.info(f"Found {len(papers)} papers in scope: {search_scope}")
+        
+        # FeatureSearchServiceを取得
+        _, _, feature_service, _ = get_services()
+        
+        # AI特徴検索を実行
+        search_results = feature_service.perform_ai_feature_search(
+            query=query,
+            papers=papers,
+            top_k=top_k
+        )
+        
+        if search_results['status'] != 'success':
+            return jsonify({
+                'success': False,
+                'error': search_results.get('message', 'Feature search failed')
+            }), 500
+        
+        # ブックマークを保存
+        if save_bookmarks and search_results.get('results'):
+            paper_ids = [r['paper_id'] for r in search_results['results']]
+            bookmark_result = feature_service.save_bookmarked_papers(paper_ids)
+            search_results['bookmark_status'] = bookmark_result
+        
+        return jsonify({
+            'success': True,
+            'query': query,
+            'scope': search_scope,
+            'total_papers_searched': search_results['total_papers'],
+            'results_count': search_results['selected_papers'],
+            'results': search_results['results'],
+            'bookmark_status': search_results.get('bookmark_status')
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in api_feature_search: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@main.route('/api/llm/analyze-papers', methods=['POST'])
+def api_analyze_papers():
+    """選択した論文の詳細分析API"""
+    try:
+        data = request.get_json()
+        paper_ids = data.get('paper_ids', [])
+        
+        if not paper_ids:
+            return jsonify({
+                'success': False,
+                'error': 'No paper IDs provided'
+            }), 400
+        
+        papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
+        
+        if not papers:
+            return jsonify({
+                'success': False,
+                'error': 'Papers not found'
+            }), 404
+        
+        _, _, feature_service, _ = get_services()
+        
+        # 各論文の詳細分析を実行
+        analyzed_papers = []
+        for paper in papers:
+            analysis = feature_service._analyze_paper(paper)
+            analyzed_papers.append({
+                'paper_id': paper.id,
+                'title': paper.title,
+                'analysis': analysis
+            })
+        
+        return jsonify({
+            'success': True,
+            'analyzed_count': len(analyzed_papers),
+            'results': analyzed_papers
+        })
+    
+    except Exception as e:
+        logger.error(f"Error in api_analyze_papers: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -122,7 +252,7 @@ def api_statistics():
         else:
             papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
         
-        _, analysis, _ = get_services()
+        _, analysis, _, _ = get_services()
         stats = analysis.get_statistics(papers)
         
         return jsonify({
@@ -149,7 +279,7 @@ def api_mining():
         else:
             papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
         
-        _, analysis, _ = get_services()
+        _, analysis, _, _ = get_services()
         
         if mining_type == 'keywords':
             results = analysis.extract_keywords(papers, top_n=data.get('top_n', 20))
@@ -177,98 +307,6 @@ def api_mining():
                 'success': False,
                 'error': 'Invalid mining type'
             }), 400
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@main.route('/api/llm/search', methods=['POST'])
-def api_llm_search():
-    """LLM特徴量検索API (F-008)"""
-    try:
-        data = request.get_json()
-        query = data.get('query', '')
-        search_scope = data.get('scope', 'all')  # all, session, bookmarked
-        
-        # 検索範囲の論文を取得
-        if search_scope == 'bookmarked':
-            bookmarks = Bookmark.query.all()
-            papers = [b.paper for b in bookmarks]
-        elif search_scope == 'session' and data.get('session_id'):
-            session = SearchSession.query.get(data['session_id'])
-            papers = session.papers if session else []
-        else:
-            papers = Paper.query.limit(500).all()  # 処理時間を考慮
-        
-        _, _, llm, _ = get_services()
-        
-        # ベクトルインデックスを構築（LLMサービスの場合）
-        if hasattr(llm, 'build_vector_index'):
-            llm.build_vector_index(papers)
-            
-            # 検索実行
-            if data.get('feature_extraction'):
-                # 特徴抽出モード
-                results = llm.extract_features(query, papers)
-            else:
-                # セマンティック検索モード
-                results = llm.semantic_search(query, top_k=data.get('top_k', 10))
-        else:
-            # 統合LLMサービスを使用
-            paper_dicts = [p.to_dict() for p in papers]
-            results = llm.semantic_search(query, paper_dicts, top_k=data.get('top_k', 10))
-            
-            # 結果の形式を統一
-            results = [{'paper': r['document'], 'relevance_score': r['similarity_score']} for r in results]
-        
-        return jsonify({
-            'success': True,
-            'results': results
-        })
-    
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@main.route('/api/llm/answer', methods=['POST'])
-def api_llm_answer():
-    """LLMによる質問応答API"""
-    try:
-        data = request.get_json()
-        question = data.get('question', '')
-        paper_ids = data.get('paper_ids', [])
-        
-        papers = Paper.query.filter(Paper.id.in_(paper_ids)).all() if paper_ids else []
-        
-        _, _, llm, _ = get_services()
-        
-        if hasattr(llm, 'answer_question') and papers:
-            # LLMサービスのメソッドを使用
-            result = llm.answer_question(question, papers)
-        else:
-            # 統合LLMサービスを使用
-            context = ""
-            for paper in papers[:5]:
-                context += f"Title: {paper.title}\n"
-                if paper.abstract:
-                    context += f"Abstract: {paper.abstract}\n"
-                context += "\n"
-            
-            answer = llm.answer_question(question, context)
-            result = {
-                'answer': answer,
-                'sources': [p.to_dict() for p in papers[:5]]
-            }
-        
-        return jsonify({
-            'success': True,
-            'answer': result['answer'],
-            'sources': result['sources']
-        })
     
     except Exception as e:
         return jsonify({
@@ -368,3 +406,44 @@ def api_sessions():
             'success': False,
             'error': str(e)
         }), 500
+
+# ヘルパー関数
+
+def _get_papers_by_scope(scope: str, session_id: Optional[int] = None) -> List[Paper]:
+    """指定されたスコープに基づいて論文を取得"""
+    papers = []
+    
+    if scope == 'bookmarked':
+        bookmarks = Bookmark.query.all()
+        papers = [b.paper for b in bookmarks]
+    elif scope == 'session' and session_id:
+        session = SearchSession.query.get(session_id)
+        papers = session.papers if session else []
+    else:  # 'all' または その他
+        # 処理時間を考慮して最新の500件に制限
+        papers = Paper.query.order_by(Paper.created_at.desc()).limit(500).all()
+    
+    return papers
+
+def _save_or_update_paper(paper_data: dict):
+    """論文データを保存または更新"""
+    try:
+        paper = Paper.query.filter_by(scholar_id=paper_data.get('scholar_id')).first()
+        
+        if not paper:
+            paper = Paper()
+        
+        # データを設定
+        for key, value in paper_data.items():
+            if hasattr(paper, key):
+                setattr(paper, key, value)
+        
+        db.session.add(paper)
+        db.session.commit()
+        
+        return paper
+    
+    except Exception as e:
+        logger.error(f"Error saving paper: {str(e)}")
+        db.session.rollback()
+        return None

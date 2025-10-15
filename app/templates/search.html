@@ -8,7 +8,7 @@
         
         <div class="form-group">
             <label class="form-label">検索タイプ</label>
-            <select v-model="searchType" class="form-control">
+            <select v-model="searchType" class="form-control" @change="onSearchTypeChange">
                 <option value="keyword">キーワード検索</option>
                 <option value="author">著者名検索</option>
                 <option value="llm">AI特徴量検索</option>
@@ -17,13 +17,44 @@
         
         <div class="form-group">
             <label class="form-label">検索クエリ</label>
+            <textarea 
+                v-if="searchType === 'llm'"
+                v-model="query" 
+                class="form-control"
+                rows="3"
+                placeholder="例: 深層学習を使った画像認識の新しい手法を提案している論文&#10;例: 自然言語処理における事前学習モデルの改良に関する研究&#10;例: 強化学習を医療分野に応用した事例"
+            ></textarea>
             <input 
+                v-else
                 v-model="query" 
                 type="text" 
                 class="form-control"
-                :placeholder="searchType === 'llm' ? '例: 機械学習の新しい手法を提案している論文' : '検索キーワードを入力'"
+                placeholder="検索キーワードを入力"
                 @keyup.enter="search"
             >
+        </div>
+        
+        <div v-if="searchType === 'llm'" class="form-group">
+            <label class="form-label">検索範囲</label>
+            <select v-model="searchScope" class="form-control">
+                <option value="all">すべての論文</option>
+                <option value="bookmarked">ブックマークした論文</option>
+                <option value="session">特定セッションの論文</option>
+            </select>
+            
+            <div v-if="searchScope === 'session'" style="margin-top: 0.5rem;">
+                <select v-model="selectedSessionId" class="form-control">
+                    <option v-for="session in availableSessions" :key="session.id" :value="session.id">
+                        {{ session.name }} ({{ session.results_count }}件)
+                    </option>
+                </select>
+            </div>
+        </div>
+        
+        <div v-if="searchType === 'llm'" class="form-group">
+            <label class="form-label">結果表示数</label>
+            <input v-model.number="topK" type="number" class="form-control" min="5" max="50" step="5">
+            <small style="color: #666;">類似度が高い上位K件を表示します</small>
         </div>
         
         <div v-if="searchType !== 'llm'" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -37,12 +68,21 @@
             </div>
         </div>
         
-        <button @click="search" class="btn btn-primary" :disabled="loading">
-            <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
-            <span v-text="loading ? '検索中...' : '検索実行'"></span>
-        </button>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <button @click="search" class="btn btn-primary" :disabled="loading || !query">
+                <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
+                <span v-text="loading ? '検索中...' : '検索実行'"></span>
+            </button>
+            
+            <div v-if="searchType === 'llm'" style="display: flex; align-items: center;">
+                <input type="checkbox" v-model="autoBookmark" id="autoBookmark" style="margin-right: 0.5rem;">
+                <label for="autoBookmark" style="margin: 0; cursor: pointer;">
+                    検索結果を自動でブックマーク
+                </label>
+            </div>
+        </div>
         
-        <button v-if="results.length > 0" @click="showAnalysis" class="btn btn-secondary" style="margin-left: 1rem;">
+        <button v-if="results.length > 0" @click="showAnalysis" class="btn btn-secondary" style="margin-top: 1rem;">
             統計分析を表示
         </button>
     </div>
@@ -52,8 +92,90 @@
         <span v-text="error"></span>
     </div>
     
-    <!-- 検索結果 -->
-    <div v-if="results.length > 0" class="card">
+    <!-- AI特徴検索の結果 -->
+    <div v-if="searchType === 'llm' && aiResults.length > 0" class="card">
+        <h3 style="margin-bottom: 1.5rem;">
+            AI特徴量検索結果 
+            <span style="font-size: 1rem; color: #666;">
+                ({{ totalPapersSearched }}件から{{ aiResults.length }}件を選択)
+            </span>
+        </h3>
+        
+        <div v-for="(result, index) in aiResults" :key="result.paper_id" class="paper-item" style="border: 1px solid #e5e5e7; padding: 1.5rem; margin-bottom: 1rem; border-radius: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                    <h4 class="paper-title" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="background: #0066cc; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem;">
+                            #{{ index + 1 }}
+                        </span>
+                        <span @click="showPaperDetail(result)" style="cursor: pointer;">
+                            {{ result.title }}
+                        </span>
+                    </h4>
+                    
+                    <div class="paper-authors" v-if="result.authors">
+                        <span v-text="formatAuthors(result.authors)"></span>
+                    </div>
+                    
+                    <div class="paper-meta">
+                        <span v-if="result.year">📅 {{ result.year }}</span>
+                        <span style="margin-left: 1rem;">
+                            📊 類似度: 
+                            <strong style="color: #0066cc;">{{ (result.similarity_score * 100).toFixed(1) }}%</strong>
+                        </span>
+                    </div>
+                    
+                    <!-- AI分析結果 -->
+                    <div v-if="result.background || result.methodology || result.novelty" style="margin-top: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
+                        <div v-if="result.background" style="margin-bottom: 0.75rem;">
+                            <strong style="color: #28a745;">📚 背景:</strong>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.background }}</p>
+                        </div>
+                        
+                        <div v-if="result.methodology" style="margin-bottom: 0.75rem;">
+                            <strong style="color: #17a2b8;">🔬 手法:</strong>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.methodology }}</p>
+                        </div>
+                        
+                        <div v-if="result.novelty">
+                            <strong style="color: #ffc107;">✨ 新規性:</strong>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.novelty }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button 
+                        @click="bookmarkPaper(result)" 
+                        class="btn btn-secondary" 
+                        style="font-size: 0.9rem; padding: 0.5rem 1rem;"
+                        :disabled="result.bookmarked"
+                    >
+                        {{ result.bookmarked ? 'ブックマーク済み' : 'ブックマーク' }}
+                    </button>
+                    <a 
+                        v-if="result.url" 
+                        :href="result.url" 
+                        target="_blank" 
+                        class="btn btn-secondary" 
+                        style="font-size: 0.9rem; padding: 0.5rem 1rem; text-align: center;"
+                    >
+                        論文を開く
+                    </a>
+                    <button 
+                        @click="analyzeDetails(result.paper_id)" 
+                        class="btn btn-secondary" 
+                        style="font-size: 0.9rem; padding: 0.5rem 1rem;"
+                    >
+                        詳細分析
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通常の検索結果 -->
+    <div v-if="searchType !== 'llm' && results.length > 0" class="card">
         <h3 style="margin-bottom: 1.5rem;">検索結果 (<span v-text="totalResults"></span>件)</h3>
         
         <div v-for="paper in results" :key="paper.id || paper.scholar_id" class="paper-item">
@@ -124,53 +246,111 @@ createApp({
             loading: false,
             error: null,
             results: [],
+            aiResults: [],
             totalResults: 0,
+            totalPapersSearched: 0,
             currentPage: 1,
             totalPages: 0,
             showStats: false,
             statistics: null,
-            miningResults: null
+            miningResults: null,
+            searchScope: 'all',
+            selectedSessionId: null,
+            availableSessions: [],
+            topK: 10,
+            autoBookmark: false
         }
+    },
+    mounted() {
+        // セッション一覧を取得
+        this.loadSessions();
     },
     methods: {
         async search() {
             this.loading = true;
             this.error = null;
+            this.results = [];
+            this.aiResults = [];
             
             try {
-                let endpoint = '/api/search';
-                let payload = {
-                    query: this.query,
-                    type: this.searchType,
-                    page: this.currentPage
-                };
-                
                 if (this.searchType === 'llm') {
-                    endpoint = '/api/llm/search';
-                } else {
-                    payload.year_from = this.yearFrom ? parseInt(this.yearFrom) : null;
-                    payload.year_to = this.yearTo ? parseInt(this.yearTo) : null;
-                   
-                }
-                
-                const response = await axios.post(endpoint, payload);
-                
-                if (response.data.success) {
-                    this.results = response.data.results;
-                    this.totalResults = response.data.total || this.results.length;
-                    this.totalPages = response.data.pages || 1;
+                    // AI特徴量検索
+                    const response = await axios.post('/api/llm/feature-search', {
+                        query: this.query,
+                        scope: this.searchScope,
+                        session_id: this.selectedSessionId,
+                        top_k: this.topK,
+                        save_bookmarks: this.autoBookmark
+                    });
                     
-                    // データマイニング実行
-                    if (this.results.length > 0) {
-                        this.performDataMining();
+                    if (response.data.success) {
+                        this.aiResults = response.data.results;
+                        this.totalPapersSearched = response.data.total_papers_searched;
+                        
+                        if (this.autoBookmark && response.data.bookmark_status) {
+                            console.log('Bookmark status:', response.data.bookmark_status);
+                            if (response.data.bookmark_status.status === 'success') {
+                                this.showNotification(`${response.data.bookmark_status.saved_count}件の論文をブックマークしました`);
+                            }
+                        }
+                    } else {
+                        this.error = response.data.error;
                     }
                 } else {
-                    this.error = response.data.error;
+                    // 通常の検索
+                    const response = await axios.post('/api/search', {
+                        query: this.query,
+                        type: this.searchType,
+                        year_from: this.yearFrom ? parseInt(this.yearFrom) : null,
+                        year_to: this.yearTo ? parseInt(this.yearTo) : null,
+                        page: this.currentPage
+                    });
+                    
+                    if (response.data.success) {
+                        this.results = response.data.results;
+                        this.totalResults = response.data.total || this.results.length;
+                        this.totalPages = response.data.pages || 1;
+                        
+                        // データマイニング実行
+                        if (this.results.length > 0) {
+                            this.performDataMining();
+                        }
+                    } else {
+                        this.error = response.data.error;
+                    }
                 }
             } catch (err) {
                 this.error = err.response?.data?.error || 'エラーが発生しました';
+                console.error('Search error:', err);
             } finally {
                 this.loading = false;
+            }
+        },
+        
+        async loadSessions() {
+            try {
+                const response = await axios.get('/api/sessions');
+                if (response.data.success) {
+                    this.availableSessions = response.data.sessions;
+                }
+            } catch (err) {
+                console.error('Failed to load sessions:', err);
+            }
+        },
+        
+        async analyzeDetails(paperId) {
+            try {
+                const response = await axios.post('/api/llm/analyze-papers', {
+                    paper_ids: [paperId]
+                });
+                
+                if (response.data.success && response.data.results.length > 0) {
+                    const analysis = response.data.results[0];
+                    alert(`詳細分析結果:\n\n背景: ${analysis.analysis.background}\n\n手法: ${analysis.analysis.methodology}\n\n新規性: ${analysis.analysis.novelty}`);
+                }
+            } catch (err) {
+                console.error('Analysis error:', err);
+                alert('分析に失敗しました');
             }
         },
         
@@ -203,9 +383,6 @@ createApp({
                     
                     if (response.data.success) {
                         this.statistics = response.data.statistics;
-                        this.$nextTick(() => {
-                            this.drawYearChart();
-                        });
                     }
                 } catch (err) {
                     console.error('Statistics error:', err);
@@ -213,41 +390,20 @@ createApp({
             }
         },
         
-        drawYearChart() {
-            const ctx = document.getElementById('yearChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: this.statistics.year_distribution.years,
-                    datasets: [{
-                        label: '論文数',
-                        data: this.statistics.year_distribution.counts,
-                        backgroundColor: 'rgba(0, 102, 204, 0.6)',
-                        borderColor: 'rgba(0, 102, 204, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        },
-        
         async bookmarkPaper(paper) {
             try {
+                const paperId = paper.paper_id || paper.id;
                 const response = await axios.post('/api/bookmark', {
-                    paper_id: paper.id,
-                    note: '',
-                    tags: []
+                    paper_id: paperId,
+                    note: paper.similarity_score ? `AI Score: ${(paper.similarity_score * 100).toFixed(1)}%` : '',
+                    tags: ['ai-search']
                 });
                 
                 if (response.data.success) {
-                    alert('ブックマークしました');
+                    if (paper.bookmarked !== undefined) {
+                        paper.bookmarked = true;
+                    }
+                    this.showNotification('ブックマークしました');
                 }
             } catch (err) {
                 alert('ブックマークに失敗しました');
@@ -255,13 +411,17 @@ createApp({
         },
         
         showPaperDetail(paper) {
-            // 詳細表示機能（実装予定）
+            // 詳細表示機能
             console.log('Paper detail:', paper);
         },
         
         formatAuthors(authors) {
             if (!authors || authors.length === 0) return '著者不明';
             if (typeof authors === 'string') return authors;
+            const maxAuthors = 3;
+            if (authors.length > maxAuthors) {
+                return authors.slice(0, maxAuthors).join(', ') + ` 他${authors.length - maxAuthors}名`;
+            }
             return authors.join(', ');
         },
         
@@ -273,8 +433,52 @@ createApp({
         changePage(page) {
             this.currentPage = page;
             this.search();
+        },
+        
+        onSearchTypeChange() {
+            // 検索タイプが変更されたときにクエリをクリア
+            this.query = '';
+            this.results = [];
+            this.aiResults = [];
+        },
+        
+        showNotification(message) {
+            // 簡易的な通知表示（実際のプロジェクトではより洗練された通知システムを使用）
+            const notification = document.createElement('div');
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                z-index: 9999;
+                animation: slideIn 0.3s ease-out;
+            `;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
         }
     }
 }).mount('#searchApp');
 </script>
+
+<style>
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
 {% endblock %}
+
+
