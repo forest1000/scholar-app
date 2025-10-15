@@ -68,7 +68,7 @@ def seed_db():
 @app.cli.command()
 def download_models():
     """必要なAIモデルをダウンロード"""
-    from app.services.llm_service_v2 import FeatureSearchService
+    from app.services.llm_service import FeatureSearchService
     
     logger.info("Downloading required models...")
     service = FeatureSearchService()
@@ -78,7 +78,7 @@ def download_models():
 def make_shell_context():
     """Flaskシェルコンテキスト"""
     from app.models import Paper, SearchSession, Bookmark
-    from app.services.llm_service_v2 import FeatureSearchService
+    from app.services.llm_service import FeatureSearchService
     
     return {
         'db': db,

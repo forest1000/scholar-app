@@ -12,10 +12,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # ページネーション
-    ITEMS_PER_PAGE = 20
+    ITEMS_PER_PAGE = 10
     
     # arXiv設定
-    ARXIV_WAIT_TIME = 3  # API呼び出し間の待機時間（秒）
+    ARXIV_WAIT_TIME = 0.1  # API呼び出し間の待機時間（秒）
     MAX_RESULTS_PER_QUERY = 100
     MOCK_ARXIV = False  # 開発時はTrueにしてモックデータを使用
     
@@ -60,9 +60,9 @@ class Config:
 
 class DevelopmentConfig(Config):
     """開発環境設定"""
-    DEBUG = True
+    DEBUG = False
     TESTING = False
-    MOCK_ARXIV = True  # 開発時はモックデータを使用
+    MOCK_ARXIV = False  # 開発時はモックデータを使用
     
     # SQLiteを使用（開発環境）
     SQLALCHEMY_DATABASE_URI = 'sqlite:///dev_scholar.db'

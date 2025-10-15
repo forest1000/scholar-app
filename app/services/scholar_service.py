@@ -2,6 +2,7 @@ import time
 import logging
 from typing import List, Dict, Optional
 import arxiv
+from arxiv_query_builder import build_query, run
 from app.models import Paper, db
 from flask import current_app
 
@@ -11,7 +12,7 @@ class ScholarService:
     """arXivとの連携処理を担当するサービスクラス（既存のインターフェースを維持）"""
 
     def __init__(self):
-        # 既存の設定キーをそのまま読みます（必要なら ARXIV_* も併用）
+
         self.wait_time = current_app.config.get('ARXIV_WAIT_TIME',
                            current_app.config.get('SCHOLAR_WAIT_TIME', 2))
         self.max_results = current_app.config.get('MAX_RESULTS_PER_QUERY', 100)

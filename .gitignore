@@ -3,8 +3,12 @@
 .env.example
 .env
 *.pyc
+.vscode
+__pycache__
 
 # database
 migrations/
 hoge.md
 .gitignore
+instance
+

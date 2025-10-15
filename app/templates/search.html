@@ -15,23 +15,27 @@
             </select>
         </div>
         
-        <div class="form-group">
-            <label class="form-label">検索クエリ</label>
-            <textarea 
-                v-if="searchType === 'llm'"
-                v-model="query" 
-                class="form-control"
-                rows="3"
-                placeholder="例: 深層学習を使った画像認識の新しい手法を提案している論文&#10;例: 自然言語処理における事前学習モデルの改良に関する研究&#10;例: 強化学習を医療分野に応用した事例"
-            ></textarea>
+        <!-- キーワード検索・著者名検索用の入力欄 -->
+        <div class="form-group" v-if="searchType !== 'llm'">
+            <label class="form-label">検索キーワード</label>
             <input 
-                v-else
                 v-model="query" 
                 type="text" 
                 class="form-control"
                 placeholder="検索キーワードを入力"
                 @keyup.enter="search"
             >
+        </div>
+        
+        <!-- AI特徴量検索用のテキストエリア -->
+        <div class="form-group" v-if="searchType === 'llm'">
+            <label class="form-label">検索クエリ</label>
+            <textarea 
+                v-model="query" 
+                class="form-control"
+                rows="3"
+                placeholder="例: 深層学習を使った画像認識の新しい手法を提案している論文&#10;例: 自然言語処理における事前学習モデルの改良に関する研究&#10;例: 強化学習を医療分野に応用した事例"
+            ></textarea>
         </div>
         
         <div v-if="searchType === 'llm'" class="form-group">
@@ -45,7 +49,7 @@
             <div v-if="searchScope === 'session'" style="margin-top: 0.5rem;">
                 <select v-model="selectedSessionId" class="form-control">
                     <option v-for="session in availableSessions" :key="session.id" :value="session.id">
-                        {{ session.name }} ({{ session.results_count }}件)
+                        [[ session.name ]] ([[ session.results_count ]]件)
                     </option>
                 </select>
             </div>
@@ -71,7 +75,7 @@
         <div style="display: flex; gap: 1rem; align-items: center;">
             <button @click="search" class="btn btn-primary" :disabled="loading || !query">
                 <span v-if="loading" class="loading" style="margin-right: 0.5rem;"></span>
-                <span v-text="loading ? '検索中...' : '検索実行'"></span>
+                [[ loading ? '検索中...' : '検索実行' ]]
             </button>
             
             <div v-if="searchType === 'llm'" style="display: flex; align-items: center;">
@@ -89,7 +93,7 @@
     
     <!-- エラー表示 -->
     <div v-if="error" class="alert alert-error">
-        <span v-text="error"></span>
+        [[ error ]]
     </div>
     
     <!-- AI特徴検索の結果 -->
@@ -97,7 +101,7 @@
         <h3 style="margin-bottom: 1.5rem;">
             AI特徴量検索結果 
             <span style="font-size: 1rem; color: #666;">
-                ({{ totalPapersSearched }}件から{{ aiResults.length }}件を選択)
+                ([[ totalPapersSearched ]]件から[[ aiResults.length ]]件を選択)
             </span>
         </h3>
         
@@ -106,22 +110,22 @@
                 <div style="flex: 1;">
                     <h4 class="paper-title" style="display: flex; align-items: center; gap: 0.5rem;">
                         <span style="background: #0066cc; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.9rem;">
-                            #{{ index + 1 }}
+                            #[[ index + 1 ]]
                         </span>
                         <span @click="showPaperDetail(result)" style="cursor: pointer;">
-                            {{ result.title }}
+                            [[ result.title ]]
                         </span>
                     </h4>
                     
                     <div class="paper-authors" v-if="result.authors">
-                        <span v-text="formatAuthors(result.authors)"></span>
+                        [[ formatAuthors(result.authors) ]]
                     </div>
                     
                     <div class="paper-meta">
-                        <span v-if="result.year">📅 {{ result.year }}</span>
+                        <span v-if="result.year">📅 [[ result.year ]]</span>
                         <span style="margin-left: 1rem;">
                             📊 類似度: 
-                            <strong style="color: #0066cc;">{{ (result.similarity_score * 100).toFixed(1) }}%</strong>
+                            <strong style="color: #0066cc;">[[ (result.similarity_score * 100).toFixed(1) ]]%</strong>
                         </span>
                     </div>
                     
@@ -129,17 +133,17 @@
                     <div v-if="result.background || result.methodology || result.novelty" style="margin-top: 1rem; background: #f8f9fa; padding: 1rem; border-radius: 8px;">
                         <div v-if="result.background" style="margin-bottom: 0.75rem;">
                             <strong style="color: #28a745;">📚 背景:</strong>
-                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.background }}</p>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">[[ result.background ]]</p>
                         </div>
                         
                         <div v-if="result.methodology" style="margin-bottom: 0.75rem;">
                             <strong style="color: #17a2b8;">🔬 手法:</strong>
-                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.methodology }}</p>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">[[ result.methodology ]]</p>
                         </div>
                         
                         <div v-if="result.novelty">
                             <strong style="color: #ffc107;">✨ 新規性:</strong>
-                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">{{ result.novelty }}</p>
+                            <p style="margin: 0.25rem 0 0 1.5rem; color: #666;">[[ result.novelty ]]</p>
                         </div>
                     </div>
                 </div>
@@ -151,7 +155,7 @@
                         style="font-size: 0.9rem; padding: 0.5rem 1rem;"
                         :disabled="result.bookmarked"
                     >
-                        {{ result.bookmarked ? 'ブックマーク済み' : 'ブックマーク' }}
+                        [[ result.bookmarked ? 'ブックマーク済み' : 'ブックマーク' ]]
                     </button>
                     <a 
                         v-if="result.url" 
@@ -176,20 +180,20 @@
     
     <!-- 通常の検索結果 -->
     <div v-if="searchType !== 'llm' && results.length > 0" class="card">
-        <h3 style="margin-bottom: 1.5rem;">検索結果 (<span v-text="totalResults"></span>件)</h3>
+        <h3 style="margin-bottom: 1.5rem;">検索結果 ([[ totalResults ]]件)</h3>
         
         <div v-for="paper in results" :key="paper.id || paper.scholar_id" class="paper-item">
             <h4 class="paper-title" @click="showPaperDetail(paper)">
-                <span v-text="paper.title"></span>
+                [[ paper.title ]]
             </h4>
             <div class="paper-authors">
-                <span v-text="formatAuthors(paper.authors)"></span>
+                [[ formatAuthors(paper.authors) ]]
             </div>
             <div class="paper-meta">
-                <span v-if="paper.publication_year">📅 <span v-text="paper.publication_year"></span></span>
+                <span v-if="paper.publication_year">📅 [[ paper.publication_year ]]</span>
             </div>
             <div v-if="paper.abstract" style="margin-top: 0.5rem; color: #6e6e73;">
-                <span v-text="truncateText(paper.abstract, 200)"></span>
+                [[ truncateText(paper.abstract, 200) ]]
             </div>
             <div style="margin-top: 0.5rem;">
                 <button @click="bookmarkPaper(paper)" class="btn btn-secondary" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
@@ -211,7 +215,7 @@
                 :class="currentPage === page ? 'btn-primary' : 'btn-secondary'"
                 style="padding: 0.5rem 1rem;"
             >
-                <span v-text="page"></span>
+                [[ page ]]
             </button>
         </div>
     </div>
@@ -224,7 +228,7 @@
             <h4>頻出キーワード</h4>
             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
                 <span v-for="kw in miningResults.keywords" :key="kw.word" class="tag" :style="{fontSize: (0.8 + kw.score * 0.5) + 'rem'}">
-                    <span v-text="kw.word"></span>
+                    [[ kw.word ]]
                 </span>
             </div>
         </div>
@@ -237,6 +241,7 @@
 const { createApp } = Vue;
 
 createApp({
+    delimiters: ['[[', ']]'],  // Vue.jsのデリミタをJinja2と競合しないように変更
     data() {
         return {
             searchType: 'keyword',
@@ -267,6 +272,12 @@ createApp({
     },
     methods: {
         async search() {
+            // クエリが空の場合は検索しない
+            if (!this.query || this.query.trim() === '') {
+                this.error = '検索キーワードまたはクエリを入力してください';
+                return;
+            }
+            
             this.loading = true;
             this.error = null;
             this.results = [];
@@ -294,7 +305,7 @@ createApp({
                             }
                         }
                     } else {
-                        this.error = response.data.error;
+                        this.error = response.data.error || '検索に失敗しました';
                     }
                 } else {
                     // 通常の検索
@@ -316,7 +327,7 @@ createApp({
                             this.performDataMining();
                         }
                     } else {
-                        this.error = response.data.error;
+                        this.error = response.data.error || '検索に失敗しました';
                     }
                 }
             } catch (err) {
@@ -332,6 +343,10 @@ createApp({
                 const response = await axios.get('/api/sessions');
                 if (response.data.success) {
                     this.availableSessions = response.data.sessions;
+                    // デフォルトでセッションがある場合は最初のセッションを選択
+                    if (this.availableSessions.length > 0) {
+                        this.selectedSessionId = this.availableSessions[0].id;
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load sessions:', err);
@@ -357,6 +372,10 @@ createApp({
         async performDataMining() {
             try {
                 const paperIds = this.results.map(p => p.id).filter(id => id);
+                if (paperIds.length === 0) {
+                    return; // IDがない場合はスキップ
+                }
+                
                 const response = await axios.post('/api/mining', {
                     paper_ids: paperIds,
                     type: 'keywords',
@@ -377,6 +396,11 @@ createApp({
             if (!this.statistics) {
                 try {
                     const paperIds = this.results.map(p => p.id).filter(id => id);
+                    if (paperIds.length === 0) {
+                        this.error = '統計分析に必要なデータがありません';
+                        return;
+                    }
+                    
                     const response = await axios.post('/api/statistics', {
                         paper_ids: paperIds
                     });
@@ -386,6 +410,7 @@ createApp({
                     }
                 } catch (err) {
                     console.error('Statistics error:', err);
+                    this.error = '統計分析に失敗しました';
                 }
             }
         },
@@ -393,6 +418,11 @@ createApp({
         async bookmarkPaper(paper) {
             try {
                 const paperId = paper.paper_id || paper.id;
+                if (!paperId) {
+                    alert('論文IDが見つかりません');
+                    return;
+                }
+                
                 const response = await axios.post('/api/bookmark', {
                     paper_id: paperId,
                     note: paper.similarity_score ? `AI Score: ${(paper.similarity_score * 100).toFixed(1)}%` : '',
@@ -406,6 +436,7 @@ createApp({
                     this.showNotification('ブックマークしました');
                 }
             } catch (err) {
+                console.error('Bookmark error:', err);
                 alert('ブックマークに失敗しました');
             }
         },
@@ -413,6 +444,7 @@ createApp({
         showPaperDetail(paper) {
             // 詳細表示機能
             console.log('Paper detail:', paper);
+            // TODO: モーダルやページ遷移で詳細を表示
         },
         
         formatAuthors(authors) {
@@ -427,7 +459,7 @@ createApp({
         
         truncateText(text, maxLength) {
             if (!text || text.length <= maxLength) return text;
-            return text.substr(0, maxLength) + '...';
+            return text.substring(0, maxLength) + '...';
         },
         
         changePage(page) {
@@ -440,10 +472,11 @@ createApp({
             this.query = '';
             this.results = [];
             this.aiResults = [];
+            this.error = null;
         },
         
         showNotification(message) {
-            // 簡易的な通知表示（実際のプロジェクトではより洗練された通知システムを使用）
+            // 簡易的な通知表示
             const notification = document.createElement('div');
             notification.textContent = message;
             notification.style.cssText = `
@@ -478,7 +511,135 @@ createApp({
         opacity: 1;
     }
 }
+
+.loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0066cc;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.paper-item {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e5e5e7;
+}
+
+.paper-item:last-child {
+    border-bottom: none;
+}
+
+.paper-title {
+    color: #0066cc;
+    cursor: pointer;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.paper-title:hover {
+    text-decoration: underline;
+}
+
+.paper-authors {
+    color: #6e6e73;
+    margin-bottom: 0.5rem;
+}
+
+.paper-meta {
+    color: #86868b;
+    font-size: 0.9rem;
+}
+
+.tag {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    color: #333;
+}
+
+.alert {
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: background 0.3s;
+}
+
+.btn-primary {
+    background: #0066cc;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #0051a3;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #e0e0e0;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.card {
+    background: white;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #0066cc;
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
 </style>
 {% endblock %}
-
-

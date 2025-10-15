@@ -4,10 +4,10 @@ from app.models import Paper, SearchSession, Bookmark, db
 from app.services.scholar_service import ScholarService
 from app.services.analysis_service import AnalysisService
 from app.services.llm_service import FeatureSearchService
-from app.services.export_service import ExportService
 import json
 from datetime import datetime
 import io
+from typing import Optional, List 
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 scholar_service = None
 analysis_service = None
 feature_search_service = None
-export_service = None
 
 def get_services():
     """サービスインスタンスを取得（遅延初期化）"""
@@ -27,14 +26,16 @@ def get_services():
         analysis_service = AnalysisService()
     if not feature_search_service:
         feature_search_service = FeatureSearchService()
-    if not export_service:
-        export_service = ExportService()
-    return scholar_service, analysis_service, feature_search_service, export_service
+    return scholar_service, analysis_service, feature_search_service
 
 @main.route('/')
 def index():
     """トップページ"""
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception:
+        current_app.logger.exception("Template render failed")
+        raise
 
 @main.route('/search')
 def search_page():
@@ -58,7 +59,7 @@ def api_search():
         page = data.get('page', 1)
         per_page = current_app.config.get('ITEMS_PER_PAGE', 20)
         
-        scholar, _, _, _ = get_services()
+        scholar, _, _ = get_services()
         
         # 検索実行
         if search_type == 'author':
@@ -140,7 +141,7 @@ def api_feature_search():
         logger.info(f"Found {len(papers)} papers in scope: {search_scope}")
         
         # FeatureSearchServiceを取得
-        _, _, feature_service, _ = get_services()
+        _, _, feature_service = get_services()
         
         # AI特徴検索を実行
         search_results = feature_service.perform_ai_feature_search(
@@ -199,7 +200,7 @@ def api_analyze_papers():
                 'error': 'Papers not found'
             }), 404
         
-        _, _, feature_service, _ = get_services()
+        _, _, feature_service = get_services()
         
         # 各論文の詳細分析を実行
         analyzed_papers = []
@@ -252,7 +253,7 @@ def api_statistics():
         else:
             papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
         
-        _, analysis, _, _ = get_services()
+        _, analysis, _ = get_services()
         stats = analysis.get_statistics(papers)
         
         return jsonify({
@@ -279,7 +280,7 @@ def api_mining():
         else:
             papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
         
-        _, analysis, _, _ = get_services()
+        _, analysis, _ = get_services()
         
         if mining_type == 'keywords':
             results = analysis.extract_keywords(papers, top_n=data.get('top_n', 20))
