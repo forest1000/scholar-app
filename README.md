@@ -30,7 +30,7 @@
 - **HuggingFace Transformers**: 事前学習済みモデル
 - **scikit-learn**: 機械学習ライブラリ
 
-### AI/MLモデル（OpenAI不使用）
+### AI/MLモデル
 - **Embeddings**: `intfloat/multilingual-e5-large` (多言語対応)
 - **Summarization**: `sonoisa/t5-base-japanese` (日本語対応)
 - **Text Processing**: NLTK, spaCy
@@ -145,17 +145,17 @@ scholar-research-assistant/
 │   ├── __init__.py           # Flaskアプリケーション初期化
 │   ├── models.py             # データベースモデル
 │   ├── main/
-│   │   ├── routes_v2.py     # 改良されたAPIエンドポイント
+│   │   ├── routes.py     # 改良されたAPIエンドポイント
 │   │   └── llm_routes.py    # LLM設定関連のルート
 │   ├── services/
-│   │   ├── llm_service_v2.py # AI特徴量検索サービス（OpenAI不使用）
+│   │   ├── llm_service_v2.py # AI特徴量検索サービス
 │   │   ├── scholar_service.py # arXiv検索サービス
 │   │   ├── analysis_service.py # データ分析サービス
 │   │   └── export_service.py  # エクスポート機能
 │   ├── templates/
 │   │   ├── base.html         # ベーステンプレート
 │   │   ├── index.html        # トップページ
-│   │   └── search_v2.html   # AI特徴量検索ページ
+│   │   └── search.html   # AI特徴量検索ページ
 │   └── static/
 │       ├── css/
 │       └── js/

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
-from app.services.unified_llm_service import UnifiedLLMService
 from app.services.gpu_detector import GPUDetector
 from app.services.local_model_manager import LocalModelManager
+from app.services.llm_backend import LocalGPUBackend
 import logging
 
 logger = logging.getLogger(__name__)
@@ -22,25 +22,10 @@ check_model_compatibility: 特定モデルの互換性チェック
 """
 
 # グローバルなサービスインスタンス
-unified_llm_service = UnifiedLLMService()
+
 gpu_detector = GPUDetector()
 model_manager = LocalModelManager()
 
-@llm_bp.route('/backends', methods=['GET'])
-def get_backends():
-    """利用可能なバックエンドの情報を取得"""
-    try:
-        backends = unified_llm_service.get_available_backends()
-        return jsonify({
-            'success': True,
-            'backends': backends
-        })
-    except Exception as e:
-        logger.error(f"Error getting backends: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 @llm_bp.route('/gpu-info', methods=['GET'])
 def get_gpu_info():
@@ -110,34 +95,14 @@ def configure_backend():
         backend_type = data.get('backend_type')
         config = data.get('config', {})
         
-        # 現在のアプリケーション設定から必要な情報を取得
-        if backend_type == 'openai' and 'api_key' not in config:
-            config['api_key'] = current_app.config.get('OPENAI_API_KEY')
-        
-        unified_llm_service.set_backend(backend_type, **config)
         
         return jsonify({
             'success': True,
-            'backend_info': unified_llm_service.get_current_backend_info()
+            'backend_info': LocalGPUBackend.get_info()
         })
     
     except Exception as e:
         logger.error(f"Error configuring backend: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-@llm_bp.route('/backend/status', methods=['GET'])
-def get_backend_status():
-    """現在のバックエンドの状態を取得"""
-    try:
-        info = unified_llm_service.get_current_backend_info()
-        return jsonify({
-            'success': True,
-            'backend_info': info
-        })
-    except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
@@ -148,7 +113,7 @@ def download_model():
     """モデルをダウンロード"""
     try:
         data = request.get_json()
-        model_id = data.get('model_id')
+        model_id = data.get('model_id')#これはどこから来た？
         
         if not model_id:
             return jsonify({
@@ -157,7 +122,7 @@ def download_model():
             }), 400
         
         # バックグラウンドタスクとして実行することも可能
-        success = unified_llm_service.download_model(model_id)
+        success = LocalGPUBackend.load_model(model_id)
         
         return jsonify({
             'success': success,

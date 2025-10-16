@@ -2,7 +2,6 @@ import time
 import logging
 from typing import List, Dict, Optional
 import arxiv
-from arxiv_query_builder import build_query, run
 from app.models import Paper, db
 from flask import current_app
 

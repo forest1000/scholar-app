@@ -34,7 +34,7 @@
                 v-model="query" 
                 class="form-control"
                 rows="3"
-                placeholder="例: 深層学習を使った画像認識の新しい手法を提案している論文&#10;例: 自然言語処理における事前学習モデルの改良に関する研究&#10;例: 強化学習を医療分野に応用した事例"
+                placeholder="例: 深層学習を使った画像認識の新しい手法を提案している論文"
             ></textarea>
         </div>
         
@@ -241,13 +241,13 @@
 const { createApp } = Vue;
 
 createApp({
-    delimiters: ['[[', ']]'],  // Vue.jsのデリミタをJinja2と競合しないように変更
+    delimiters: ['[[', ']]'], 
     data() {
         return {
             searchType: 'keyword',
             query: '',
-            yearFrom: '',
-            yearTo: '',
+            yearFrom: '2024',
+            yearTo: '2025',
             loading: false,
             error: null,
             results: [],
@@ -262,7 +262,7 @@ createApp({
             searchScope: 'all',
             selectedSessionId: null,
             availableSessions: [],
-            topK: 10,
+            topK: 100,
             autoBookmark: false
         }
     },
@@ -286,6 +286,7 @@ createApp({
             try {
                 if (this.searchType === 'llm') {
                     // AI特徴量検索
+                    // クエリをキーワードと文章の２つでやりたいため後で変更
                     const response = await axios.post('/api/llm/feature-search', {
                         query: this.query,
                         scope: this.searchScope,
@@ -314,7 +315,8 @@ createApp({
                         type: this.searchType,
                         year_from: this.yearFrom ? parseInt(this.yearFrom) : null,
                         year_to: this.yearTo ? parseInt(this.yearTo) : null,
-                        page: this.currentPage
+                        page: this.currentPage,
+                        save_session: true
                     });
                     
                     if (response.data.success) {
