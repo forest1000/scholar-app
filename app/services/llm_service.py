@@ -5,7 +5,8 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.schema import Document
 from langchain.text_splitter import CharacterTextSplitter
-from app.models import Paper, db, Bookmark
+from app.database import db
+from app.models import Bookmark
 import json
 import logging
 from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
@@ -61,7 +62,7 @@ class FeatureSearchService:
             self.summarizer = None
             self.summarizer_model = None
     
-    def perform_ai_feature_search(self, query: str, papers: List[Paper], top_k: int = 10) -> Dict:
+    def perform_ai_feature_search(self, query: str, papers, top_k: int = 10) -> Dict:
         """
         AI特徴検索のメイン処理
         
@@ -113,7 +114,7 @@ class FeatureSearchService:
         query_embedding = self.embeddings.embed_query(processed_query)
         return np.array(query_embedding)
     
-    def _get_paper_embeddings(self, papers: List[Paper]) -> Dict[int, np.ndarray]:
+    def _get_paper_embeddings(self, papers: List[Bookmark]) -> Dict[int, np.ndarray]:
         """各論文のベクトル表現を取得"""
         paper_embeddings = {}
         
@@ -131,7 +132,7 @@ class FeatureSearchService:
         logger.info(f"Generated embeddings for {len(paper_embeddings)} papers")
         return paper_embeddings
     
-    def _construct_paper_text(self, paper: Paper) -> str:
+    def _construct_paper_text(self, paper: Bookmark) -> str:
         """論文の検索用テキストを構築"""
         parts = []
         
@@ -155,10 +156,10 @@ class FeatureSearchService:
     def _select_top_k_papers(
         self, 
         query_embedding: np.ndarray, 
-        papers: List[Paper], 
+        papers: List[Bookmark], 
         paper_embeddings: Dict[int, np.ndarray],
         top_k: int
-    ) -> List[Tuple[Paper, float]]:
+    ) -> List[Tuple[List, float]]:
         """コサイン類似度に基づいて上位K個の論文を選択"""
         
         similarities = []
@@ -183,7 +184,7 @@ class FeatureSearchService:
         logger.info(f"Selected top {len(top_papers)} papers from {len(similarities)} candidates")
         return top_papers
     
-    def _generate_summaries(self, top_papers: List[Tuple[Paper, float]]) -> List[Dict]:
+    def _generate_summaries(self, top_papers: List[Tuple[List, float]]) -> List[Dict]:
         """選択された論文の詳細な要約を生成"""
         summarized_papers = []
         
@@ -213,7 +214,7 @@ class FeatureSearchService:
         
         return summarized_papers
     
-    def _analyze_paper(self, paper: Paper) -> Dict[str, str]:
+    def _analyze_paper(self, paper: Bookmark) -> Dict[str, str]:
         """論文の背景、手法、新規性を分析"""
         
         if not paper.abstract:
@@ -352,7 +353,7 @@ class FeatureSearchService:
             'errors': errors if errors else None
         }
     
-    def build_vector_index(self, papers: List[Paper]) -> None:
+    def build_vector_index(self, papers: List[Bookmark]) -> None:
         """論文のベクトルインデックスを構築（FAISSを使用）"""
         if not papers:
             logger.warning("No papers provided for vector index building")

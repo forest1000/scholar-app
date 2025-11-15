@@ -2,7 +2,8 @@ import time
 import logging
 from typing import List, Dict, Optional
 import arxiv
-from app.models import Paper, db
+from app.database import db
+from app.models import Bookmark
 from flask import current_app
 
 logger = logging.getLogger(__name__)

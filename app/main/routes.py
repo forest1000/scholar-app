@@ -1,8 +1,8 @@
 from flask import render_template, request, jsonify, current_app, send_file, make_response
 from app.main import main
-from app.models import Paper, SearchSession, Bookmark, db
+from app.database import db
+from app.models import Bookmark
 from app.services.scholar_service import ScholarService
-from app.services.analysis_service import AnalysisService
 from app.services.llm_service import FeatureSearchService
 import json
 from datetime import datetime
@@ -53,7 +53,7 @@ def api_search():
     try:
         data = request.get_json()
         query = data.get('query', '')
-        search_type = data.get('type', 'keyword')  # keyword, author, title
+        search_type = data.get('type', 'keyword')  # keyword, author
         year_from = data.get('year_from')
         year_to = data.get('year_to')
         page = data.get('page', 1)
@@ -79,22 +79,6 @@ def api_search():
             paper = _save_or_update_paper(result)
             if paper:
                 saved_papers.append(paper)
-        
-        # セッション保存
-        if data.get('save_session'):
-            session = SearchSession(
-                session_name=data.get('session_name', f"Search {datetime.now()}"),
-                query=query,
-                filters={'year_from': year_from, 'year_to': year_to},
-                results_count=total
-            )
-            db.session.add(session)
-            
-            # 論文との関連付け
-            for paper in saved_papers:
-                session.papers.append(paper)
-            
-            db.session.commit()
         
         return jsonify({
             'success': True,
@@ -240,33 +224,7 @@ def api_paper_detail(paper_id):
             'success': False,
             'error': str(e)
         }), 404
-
-@main.route('/api/statistics', methods=['POST'])
-def api_statistics():
-    """統計情報API (F-006)"""
-    try:
-        data = request.get_json()
-        paper_ids = data.get('paper_ids', [])
-        
-        if not paper_ids:
-            papers = Paper.query.all()
-        else:
-            papers = Paper.query.filter(Paper.id.in_(paper_ids)).all()
-        
-        _, analysis, _ = get_services()
-        stats = analysis.get_statistics(papers)
-        
-        return jsonify({
-            'success': True,
-            'statistics': stats
-        })
     
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
 @main.route('/api/mining', methods=['POST'])
 def api_mining():
     """データマイニングAPI (F-007)"""
@@ -410,19 +368,15 @@ def api_sessions():
 
 # ヘルパー関数
 
-def _get_papers_by_scope(scope: str, session_id: Optional[int] = None) -> List[Paper]:
+def _get_papers_by_scope(scope: str, session_id: Optional[int] = None) -> List[Bookmark]:
     """指定されたスコープに基づいて論文を取得"""
     papers = []
     
+    """
     if scope == 'bookmarked':
         bookmarks = Bookmark.query.all()
         papers = [b.paper for b in bookmarks]
-    elif scope == 'session' and session_id:
-        session = SearchSession.query.get(session_id)
-        papers = session.papers if session else []
-    else:  # 'all' または その他
-        # 処理時間を考慮して最新の500件に制限
-        papers = Paper.query.order_by(Paper.created_at.desc()).limit(500).all()
+    """
     
     return papers
 

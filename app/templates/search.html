@@ -5,7 +5,6 @@
     <!-- 検索フォーム -->
     <div class="card">
         <h2 style="margin-bottom: 1.5rem;">論文検索</h2>
-        
         <div class="form-group">
             <label class="form-label">検索タイプ</label>
             <select v-model="searchType" class="form-control" @change="onSearchTypeChange">
@@ -42,7 +41,6 @@
             <label class="form-label">検索範囲</label>
             <select v-model="searchScope" class="form-control">
                 <option value="all">すべての論文</option>
-                <option value="bookmarked">ブックマークした論文</option>
                 <option value="session">特定セッションの論文</option>
             </select>
             
@@ -86,9 +84,6 @@
             </div>
         </div>
         
-        <button v-if="results.length > 0" @click="showAnalysis" class="btn btn-secondary" style="margin-top: 1rem;">
-            統計分析を表示
-        </button>
     </div>
     
     <!-- エラー表示 -->
@@ -219,20 +214,7 @@
             </button>
         </div>
     </div>
-    
-    <!-- データマイニング結果 -->
-    <div v-if="miningResults" class="card">
-        <h3 style="margin-bottom: 1.5rem;">データマイニング結果</h3>
-        
-        <div v-if="miningResults.keywords">
-            <h4>頻出キーワード</h4>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
-                <span v-for="kw in miningResults.keywords" :key="kw.word" class="tag" :style="{fontSize: (0.8 + kw.score * 0.5) + 'rem'}">
-                    [[ kw.word ]]
-                </span>
-            </div>
-        </div>
-    </div>
+
 </div>
 {% endblock %}
 
@@ -257,8 +239,6 @@ createApp({
             currentPage: 1,
             totalPages: 0,
             showStats: false,
-            statistics: null,
-            miningResults: null,
             searchScope: 'all',
             selectedSessionId: null,
             availableSessions: [],
@@ -287,6 +267,7 @@ createApp({
                 if (this.searchType === 'llm') {
                     // AI特徴量検索
                     // クエリをキーワードと文章の２つでやりたいため後で変更
+                    console.log("AI特徴量検索")
                     const response = await axios.post('/api/llm/feature-search', {
                         query: this.query,
                         scope: this.searchScope,
@@ -310,6 +291,7 @@ createApp({
                     }
                 } else {
                     // 通常の検索
+                    console.log('通常検索')
                     const response = await axios.post('/api/search', {
                         query: this.query,
                         type: this.searchType,
@@ -318,6 +300,7 @@ createApp({
                         page: this.currentPage,
                         save_session: true
                     });
+                    console.log('[1] サーバーへ送信するデータ：', requsetData);
                     
                     if (response.data.success) {
                         this.results = response.data.results;
@@ -389,31 +372,6 @@ createApp({
                 }
             } catch (err) {
                 console.error('Data mining error:', err);
-            }
-        },
-        
-        async showAnalysis() {
-            this.showStats = true;
-            
-            if (!this.statistics) {
-                try {
-                    const paperIds = this.results.map(p => p.id).filter(id => id);
-                    if (paperIds.length === 0) {
-                        this.error = '統計分析に必要なデータがありません';
-                        return;
-                    }
-                    
-                    const response = await axios.post('/api/statistics', {
-                        paper_ids: paperIds
-                    });
-                    
-                    if (response.data.success) {
-                        this.statistics = response.data.statistics;
-                    }
-                } catch (err) {
-                    console.error('Statistics error:', err);
-                    this.error = '統計分析に失敗しました';
-                }
             }
         },
         

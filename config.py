@@ -16,7 +16,7 @@ class Config:
     
     # arXiv設定
     ARXIV_WAIT_TIME = 0.1  # API呼び出し間の待機時間（秒）
-    MAX_RESULTS_PER_QUERY = 100
+    MAX_RESULTS_PER_QUERY = 3
     MOCK_ARXIV = False  # 開発時はTrueにしてモックデータを使用
     
     # セッション設定

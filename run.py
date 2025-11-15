@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 config_name = os.environ.get('FLASK_ENV', 'development')
 app = create_app(config_name)
 
-# データベースマイグレーション設定
-migrate = Migrate(app, db)
+
 
 @app.cli.command()
 def init_db():
